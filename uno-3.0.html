@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UNO Multiplayer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+:root{--red:#E63946;--yellow:#F4D03F;--green:#2ECC71;--blue:#3498DB;--dark:#1a1a2e;--darker:#0d0d1a;--cw:70px;--ch:105px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:var(--darker);color:#fff;min-height:100vh;overflow-x:hidden;}
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center;}
+#lobby-screen{background:radial-gradient(ellipse at top,#1a1a3e,#0d0d1a);padding:20px;}
+.logo{font-size:clamp(60px,15vw,120px);font-weight:900;letter-spacing:-4px;background:linear-gradient(135deg,#E63946,#F4D03F,#2ECC71,#3498DB);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-bottom:8px;filter:drop-shadow(0 0 30px rgba(230,57,70,.4));animation:pulse 3s ease-in-out infinite;}
+@keyframes pulse{0%,100%{filter:drop-shadow(0 0 20px rgba(230,57,70,.4))}50%{filter:drop-shadow(0 0 50px rgba(230,57,70,.8))}}
+.tagline{color:#aaa;margin-bottom:40px;font-size:16px;letter-spacing:3px;text-transform:uppercase;}
+.lobby-btns{display:flex;flex-direction:column;gap:16px;width:100%;max-width:340px;}
+.btn{padding:16px 32px;border:none;border-radius:16px;font-family:'Nunito',sans-serif;font-size:18px;font-weight:700;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);opacity:0;transition:opacity .2s;}
+.btn:hover::after{opacity:1;}.btn:active{transform:scale(.97);}.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn-primary{background:linear-gradient(135deg,#E63946,#c0392b);color:#fff;box-shadow:0 8px 25px rgba(230,57,70,.4);}
+.btn-secondary{background:linear-gradient(135deg,#3498DB,#2980b9);color:#fff;box-shadow:0 8px 25px rgba(52,152,219,.4);}
+.btn-success{background:linear-gradient(135deg,#2ECC71,#27ae60);color:#fff;box-shadow:0 8px 25px rgba(46,204,113,.4);}
+.btn-dark{background:rgba(255,255,255,.1);color:#fff;border:2px solid rgba(255,255,255,.2);}
+.btn-sm{padding:10px 20px;font-size:14px;border-radius:10px;}
+#setup-screen{background:radial-gradient(ellipse at center,#1a1a3e,#0d0d1a);padding:20px;overflow-y:auto;}
+.box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;width:100%;max-width:500px;backdrop-filter:blur(10px);}
+.setup-title{font-size:26px;font-weight:900;margin-bottom:24px;text-align:center;}
+.form-group{margin-bottom:20px;}
+.form-label{display:block;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:8px;}
+.player-counter{display:flex;align-items:center;gap:16px;}
+.counter-btn{width:44px;height:44px;border:none;border-radius:12px;background:rgba(255,255,255,.15);color:#fff;font-size:22px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;}
+.counter-btn:hover{background:rgba(255,255,255,.3);transform:scale(1.05);}
+.counter-value{font-size:32px;font-weight:900;min-width:50px;text-align:center;}
+.sets-hint{font-size:11px;color:#F4D03F;margin-top:2px;text-align:center;}
+.type-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,.05);border-radius:12px;margin-bottom:6px;font-weight:700;font-size:14px;}
+.toggle-grp{display:flex;gap:6px;}
+.tbtn{padding:6px 12px;border-radius:8px;border:none;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.07);color:#aaa;}
+.tbtn.ah{background:#3498DB;color:#fff;}.tbtn.ab{background:#9b59b6;color:#fff;}
+.ninput{width:100%;padding:12px 16px;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;outline:none;transition:border-color .2s;}
+.ninput:focus{border-color:rgba(52,152,219,.6);}.ninput::placeholder{color:rgba(255,255,255,.3);}
+.setup-footer{display:flex;gap:12px;margin-top:24px;}.setup-footer .btn{flex:1;}
+#waiting-screen{background:radial-gradient(ellipse at center,#1a1a3e,#0d0d1a);padding:20px;overflow-y:auto;}
+.wait-title{font-size:22px;font-weight:900;text-align:center;margin-bottom:16px;}
+.codes-grid{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.code-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.ccode{font-size:28px;font-weight:900;letter-spacing:8px;background:linear-gradient(135deg,#F4D03F,#E63946);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.cstatus{font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+.sw{background:rgba(244,208,63,.15);color:#F4D03F;}.sj{background:rgba(46,204,113,.15);color:#2ECC71;}
+.pslot{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.06);border-radius:12px;font-weight:700;margin-bottom:6px;}
+.pav{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;flex-shrink:0;}
+.sdot{width:10px;height:10px;border-radius:50%;margin-left:auto;}
+.don{background:#2ECC71;box-shadow:0 0 8px #2ECC71;}.dbt{background:#9b59b6;box-shadow:0 0 8px #9b59b6;}.dw{background:rgba(255,255,255,.2);}
+.wait-footer{display:flex;gap:10px;margin-top:14px;}.wait-footer .btn{flex:1;}
+#join-screen{background:radial-gradient(ellipse at center,#1a1a3e,#0d0d1a);padding:20px;}
+.code-inputs{display:flex;gap:10px;justify-content:center;margin:20px 0;}
+.cdig{width:56px;height:68px;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.15);border-radius:14px;color:#fff;font-family:'Nunito',sans-serif;font-size:28px;font-weight:900;text-align:center;outline:none;text-transform:uppercase;transition:border-color .2s;}
+.cdig:focus{border-color:#3498DB;}
+#game-screen{background:#145a32;background-image:radial-gradient(ellipse at 20% 50%,rgba(39,174,96,.3),transparent 50%),radial-gradient(ellipse at 80% 50%,rgba(39,174,96,.3),transparent 50%);padding:0;overflow:hidden;position:relative;}
+.game-layout{display:flex;flex-direction:column;height:100vh;width:100%;max-width:1000px;margin:0 auto;padding:8px;gap:6px;}
+.opp-area{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:4px;overflow-y:auto;max-height:35vh;}
+.opp-hand{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.opp-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.8);background:rgba(0,0,0,.3);padding:3px 8px;border-radius:20px;}
+.opp-cards{display:flex;}
+.ocard{width:26px;height:40px;background:linear-gradient(135deg,#1a237e,#283593);border-radius:6px;border:2px solid rgba(255,255,255,.3);margin-left:-8px;box-shadow:2px 2px 4px rgba(0,0,0,.4);}
+.ocard:first-child{margin-left:0;}
+.ocnt{font-size:11px;font-weight:900;background:rgba(0,0,0,.5);padding:2px 8px;border-radius:20px;}
+.center-area{flex:1;display:flex;align-items:center;justify-content:center;gap:24px;position:relative;}
+.dpile,.discpile{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.deck-card{width:var(--cw);height:var(--ch);background:linear-gradient(135deg,#1a237e,#283593);border-radius:12px;border:3px solid rgba(255,255,255,.4);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:4px 4px 15px rgba(0,0,0,.5);transition:transform .2s,box-shadow .2s;position:relative;}
+.deck-card::before{content:'UNO';position:absolute;font-size:13px;font-weight:900;color:rgba(255,255,255,.6);letter-spacing:2px;}
+.deck-card:hover{transform:scale(1.05);}.deck-card.cd{border-color:#F4D03F;box-shadow:0 0 20px rgba(244,208,63,.6);}
+.ucard{width:var(--cw);height:var(--ch);border-radius:12px;border:3px solid rgba(255,255,255,.4);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px;cursor:pointer;position:relative;flex-shrink:0;user-select:none;transition:transform .15s,box-shadow .15s;box-shadow:3px 3px 10px rgba(0,0,0,.5);}
+.ucard:hover:not(.dis){transform:translateY(-12px) scale(1.05);box-shadow:0 20px 30px rgba(0,0,0,.5);}
+.ucard.play{border-color:#F4D03F;box-shadow:0 0 18px rgba(244,208,63,.7);}.ucard.play:hover{transform:translateY(-18px) scale(1.08);}
+.ucard.dis{cursor:not-allowed;opacity:.7;}
+.cr{background:radial-gradient(circle at 60% 40%,#e74c3c,#c0392b);}
+.cy{background:radial-gradient(circle at 60% 40%,#f1c40f,#d4ac0d);}
+.cg{background:radial-gradient(circle at 60% 40%,#2ecc71,#27ae60);}
+.cb{background:radial-gradient(circle at 60% 40%,#3498db,#2980b9);}
+.cw{background:conic-gradient(#E63946 0% 25%,#F4D03F 25% 50%,#2ECC71 50% 75%,#3498DB 75%);}
+.ccor{font-size:14px;font-weight:900;color:rgba(255,255,255,.95);line-height:1;text-shadow:1px 1px 3px rgba(0,0,0,.5);width:100%;}
+.ccor.bot{text-align:right;transform:rotate(180deg);}
+.ccen{font-size:26px;font-weight:900;color:rgba(255,255,255,.95);text-shadow:2px 2px 6px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.2);width:40px;height:40px;border-radius:50%;flex-shrink:0;}
+.cw .ccen{background:rgba(255,255,255,.3);font-size:18px;}
+.player-area{display:flex;flex-direction:column;align-items:center;gap:8px;padding-bottom:4px;}
+.pinfo{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.4);padding:6px 14px;border-radius:20px;font-weight:700;font-size:13px;}
+.pinfo.mt{background:rgba(244,208,63,.2);box-shadow:0 0 15px rgba(244,208,63,.3);}
+.hand-cont{display:flex;overflow-x:auto;padding:12px 10px 4px;max-width:100%;scrollbar-width:none;}
+.hand-cont::-webkit-scrollbar{display:none;}
+.hand-cont .ucard{margin-left:-18px;}.hand-cont .ucard:first-child{margin-left:0;}
+.hand-cont .ucard:hover:not(.dis){margin-left:0;margin-right:10px;z-index:10;}
+.dirbadge{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.5);padding:5px 12px;border-radius:20px;font-size:13px;font-weight:700;}
+.drawcnt{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(230,57,70,.8);padding:5px 16px;border-radius:20px;font-weight:900;font-size:14px;display:none;z-index:10;}
+.turnind{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);padding:8px 20px;border-radius:30px;font-weight:900;font-size:15px;pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap;z-index:20;}
+.turnind.show{opacity:1;}
+.uno-btn{position:absolute;bottom:130px;right:12px;background:linear-gradient(135deg,#E63946,#c0392b);color:#fff;font-family:'Nunito',sans-serif;font-size:22px;font-weight:900;padding:10px 20px;border:none;border-radius:14px;cursor:pointer;box-shadow:0 6px 20px rgba(230,57,70,.6);transition:all .2s;letter-spacing:2px;z-index:10;}
+.uno-btn:hover{transform:scale(1.05);}
+.pile-lbl{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.6);}
+.cpov{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .3s;}
+.cpov.show{opacity:1;pointer-events:all;}
+.cpgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:32px;background:rgba(255,255,255,.05);border-radius:24px;border:1px solid rgba(255,255,255,.1);}
+.cch{width:100px;height:100px;border-radius:50%;border:4px solid rgba(255,255,255,.3);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 8px 20px rgba(0,0,0,.5);}
+.cch:hover{transform:scale(1.1);border-color:#fff;}
+.ch-r{background:radial-gradient(circle at 40% 40%,#e74c3c,#c0392b);}
+.ch-y{background:radial-gradient(circle at 40% 40%,#f1c40f,#d4ac0d);}
+.ch-g{background:radial-gradient(circle at 40% 40%,#2ecc71,#27ae60);}
+.ch-b{background:radial-gradient(circle at 40% 40%,#3498db,#2980b9);}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);background:rgba(20,20,40,.95);border:1px solid rgba(255,255,255,.1);padding:12px 24px;border-radius:30px;font-weight:700;font-size:15px;z-index:200;transition:transform .4s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;max-width:90vw;text-align:center;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.red{border-color:rgba(230,57,70,.5);}.toast.yellow{border-color:rgba(244,208,63,.5);color:#F4D03F;}.toast.green{border-color:rgba(46,204,113,.5);color:#2ECC71;}
+.winov{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:150;opacity:0;pointer-events:none;transition:opacity .5s;}
+.winov.show{opacity:1;pointer-events:all;}
+.we{font-size:80px;margin-bottom:16px;animation:bns 1s ease-in-out infinite;}
+@keyframes bns{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
+.wt{font-size:42px;font-weight:900;margin-bottom:8px;}.ws{color:#aaa;margin-bottom:32px;font-size:18px;}.wbtns{display:flex;gap:14px;}
+.opp-hand.at .opp-name{background:rgba(244,208,63,.3);color:#F4D03F;box-shadow:0 0 12px rgba(244,208,63,.5);}
+.fb-loading{position:fixed;inset:0;background:rgba(13,13,26,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:300;gap:16px;}
+.fb-loading.hide{display:none;}
+.spinner{width:48px;height:48px;border:4px solid rgba(255,255,255,.1);border-top-color:#3498DB;border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:500px){:root{--cw:52px;--ch:80px;}.ccen{width:30px;height:30px;font-size:18px;}.ccor{font-size:11px;}.hand-cont .ucard{margin-left:-22px;}.box{padding:20px 16px;}}
+</style>
+</head>
+<body>
+
+<div class="fb-loading" id="fbLoading">
+  <div class="spinner"></div>
+  <div style="font-weight:700;color:#aaa;font-size:14px">Connecting...</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="cpov" id="colorPicker">
+  <div>
+    <p style="text-align:center;font-size:18px;font-weight:700;margin-bottom:20px;color:#aaa;">Choose a Color</p>
+    <div class="cpgrid">
+      <div class="cch ch-r" onclick="chooseColor('red')">&#x1F534;</div>
+      <div class="cch ch-y" onclick="chooseColor('yellow')">&#x1F7E1;</div>
+      <div class="cch ch-g" onclick="chooseColor('green')">&#x1F7E2;</div>
+      <div class="cch ch-b" onclick="chooseColor('blue')">&#x1F535;</div>
+    </div>
+  </div>
+</div>
+
+<div class="winov" id="winOverlay">
+  <div class="we" id="winEmoji">&#x1F3C6;</div>
+  <div class="wt" id="winTitle">You Win!</div>
+  <div class="ws" id="winSub">All cards played!</div>
+  <div class="wbtns">
+    <button class="btn btn-primary" onclick="restartGame()">Play Again</button>
+    <button class="btn btn-dark" onclick="goHome()">Home</button>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div class="screen active" id="lobby-screen">
+  <div class="logo">UNO</div>
+  <p class="tagline">Classic Card Game</p>
+  <div class="lobby-btns">
+    <button class="btn btn-primary" onclick="showScreen('setup-screen')">&#x1F3AE; Create Game</button>
+    <button class="btn btn-secondary" onclick="showScreen('join-screen')">&#x1F517; Join Game</button>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div class="screen" id="setup-screen">
+  <div class="box" style="max-height:90vh;overflow-y:auto;">
+    <div class="setup-title">&#x2699;&#xFE0F; Game Setup</div>
+    <div class="form-group">
+      <label class="form-label">Your Name</label>
+      <input type="text" class="ninput" id="hostName" placeholder="Enter your name" maxlength="15" value="Host">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Total Players</label>
+      <div class="player-counter">
+        <button class="counter-btn" id="btnMinus" onclick="changeCount(-1)">&#x2212;</button>
+        <div>
+          <div class="counter-value" id="playerCount">2</div>
+          <div class="sets-hint" id="setsHint"></div>
+        </div>
+        <button class="counter-btn" id="btnPlus" onclick="changeCount(1)">+</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Player Types</label>
+      <div id="typeRows"></div>
+    </div>
+    <div class="setup-footer">
+      <button class="btn btn-dark" onclick="showScreen('lobby-screen')">Back</button>
+      <button class="btn btn-success" onclick="startSetup()">Create Game &#x2192;</button>
+    </div>
+  </div>
+</div>
+
+<!-- WAITING -->
+<div class="screen" id="waiting-screen">
+  <div class="box" style="max-width:520px;max-height:90vh;overflow-y:auto;">
+    <div class="wait-title">&#x1F3AE; Waiting Room</div>
+    <p style="font-size:13px;color:#aaa;text-align:center;margin-bottom:14px">Share each player's unique code</p>
+    <div class="codes-grid" id="codesGrid"></div>
+    <div id="waitSlots"></div>
+    <div style="padding:10px;background:rgba(255,255,255,.05);border-radius:12px;font-size:13px;color:#aaa;text-align:center" id="waitStatus">Waiting for players...</div>
+    <div class="wait-footer">
+      <button class="btn btn-dark btn-sm" onclick="goHome()">Cancel</button>
+      <button class="btn btn-success" id="startBtn" onclick="startGame()" disabled>Start Game</button>
+    </div>
+  </div>
+</div>
+
+<!-- JOIN -->
+<div class="screen" id="join-screen">
+  <div class="box" style="max-width:400px;">
+    <div class="setup-title">&#x1F517; Join Game</div>
+    <div class="form-group">
+      <label class="form-label">Your Name</label>
+      <input type="text" class="ninput" id="joinName" placeholder="Your name" maxlength="15" value="Player">
+    </div>
+    <label class="form-label" style="text-align:center;display:block">Your Join Code</label>
+    <div class="code-inputs">
+      <input class="cdig" id="d0" maxlength="1" oninput="mvd(0)" onkeydown="bkd(event,0)">
+      <input class="cdig" id="d1" maxlength="1" oninput="mvd(1)" onkeydown="bkd(event,1)">
+      <input class="cdig" id="d2" maxlength="1" oninput="mvd(2)" onkeydown="bkd(event,2)">
+      <input class="cdig" id="d3" maxlength="1" oninput="mvd(3)" onkeydown="bkd(event,3)">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-dark" style="flex:1" onclick="showScreen('lobby-screen')">Back</button>
+      <button class="btn btn-secondary" style="flex:2" onclick="joinGame()">Join &#x2192;</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="game-screen">
+  <div class="game-layout">
+    <div class="opp-area" id="oppArea"></div>
+    <div class="center-area">
+      <div class="drawcnt" id="drawCnt"></div>
+      <div class="dpile">
+        <div class="deck-card" id="deckCard" onclick="drawCard()"></div>
+        <span class="pile-lbl">Draw</span>
+      </div>
+      <div class="discpile">
+        <div id="topCard" style="position:relative"></div>
+        <span class="pile-lbl">Discard</span>
+      </div>
+      <div class="dirbadge" id="dirBadge">&#x2192; CW</div>
+      <div class="turnind" id="turnInd"></div>
+    </div>
+    <div class="player-area">
+      <div class="pinfo" id="pinfo">
+        <span id="myName">You</span><span>&#x2022;</span><span id="myCnt">0 cards</span>
+      </div>
+      <div class="hand-cont" id="myHand"></div>
+    </div>
+  </div>
+  <button class="uno-btn" id="unoBtn" onclick="callUno()" style="display:none">UNO!</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ─── Firebase Config ──────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCA_jWl28aq5umyqxDBKEfgh9KVV8adpOE",
+  authDomain: "bike-showroom-app-d74fe.firebaseapp.com",
+  projectId: "bike-showroom-app-d74fe",
+  storageBucket: "bike-showroom-app-d74fe.firebasestorage.app",
+  messagingSenderId: "974534398147",
+  appId: "1:974534398147:web:8104d86439274e8b5e9276"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ─── COLLECTION NAME: "uno-game" ─────────────────────────────
+// ALL reads/writes use this collection.
+const COL = 'uno-game';
+
+document.getElementById('fbLoading').classList.add('hide');
+
+// ─── Helpers ─────────────────────────────────────────────────
+function toArr(v, len) {
+  if (Array.isArray(v)) return v;
+  if (v && typeof v === 'object') {
+    const keys = Object.keys(v);
+    const n = len || (keys.length ? Math.max(...keys.map(Number)) + 1 : 0);
+    const a = [];
+    for (let i = 0; i < n; i++) a.push(v[i] !== undefined ? v[i] : null);
+    return a;
+  }
+  return [];
+}
+
+// ─── Constants ───────────────────────────────────────────────
+const CHARS  = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const COLORS = ['red','yellow','green','blue'];
+const PCOL   = ['#E63946','#F4D03F','#2ECC71','#3498DB','#9b59b6','#e67e22','#1abc9c','#e84393'];
+const SS     = 'uno_sess_v2';
+
+function gid(n){ return Array.from({length:n},()=>CHARS[Math.floor(Math.random()*CHARS.length)]).join(''); }
+function ss(o){ try{ sessionStorage.setItem(SS,JSON.stringify(o)); }catch(e){} }
+function ls(){ try{ const s=sessionStorage.getItem(SS); return s?JSON.parse(s):null; }catch(e){ return null; } }
+function cs(){ try{ sessionStorage.removeItem(SS); }catch(e){} }
+
+// ─── Game State ───────────────────────────────────────────────
+let G = {
+  total:2, types:[], names:[], isHost:false, myIdx:0, myId:null,
+  mainCode:null,  // always the MAIN game document ID
+  codes:[],       // per-slot join codes (null for host/bot slots)
+  unsub:null, pwIdx:null,
+  deck:[], hands:[], disc:[],
+  cur:0, dir:1, dp:0, co:null,
+  started:false, over:false, win:-1
+};
+
+let sc=2, st=['human','bot'];
+
+// ─── UI helpers ───────────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+window.showScreen = showScreen;
+
+// ─── Player count + type rows ─────────────────────────────────
+function changeCount(d){
+  sc = Math.max(2, Math.min(10, sc+d));
+  document.getElementById('playerCount').textContent = sc;
+  const sets = Math.ceil(sc/4);
+  document.getElementById('setsHint').textContent = sets>1?'('+sets+' UNO sets mixed)':'';
+  while(st.length < sc) st.push('bot');
+  st = st.slice(0,sc);
+  renderRows();
+}
+window.changeCount = changeCount;
+
+function renderRows(){
+  const c = document.getElementById('typeRows'); c.innerHTML='';
+  for(let i=0; i<sc; i++){
+    const r = document.createElement('div'); r.className='type-row';
+    r.innerHTML =
+      '<span>'+(i===0?'You (Host)':'Player '+(i+1))+'</span>'+
+      '<div class="toggle-grp">'+
+        '<button class="tbtn '+(st[i]==='human'?'ah':'')+'" '+(i===0?'disabled':'')+
+          ' onclick="stype('+i+',\'human\')">&#x1F464; Human</button>'+
+        '<button class="tbtn '+(st[i]==='bot'?'ab':'')+'" '+(i===0?'disabled':'')+
+          ' onclick="stype('+i+',\'bot\')">&#x1F916; Bot</button>'+
+      '</div>';
+    c.appendChild(r);
+  }
+}
+window.stype = function(i,t){ st[i]=t; renderRows(); };
+renderRows();
+
+// ─── Create Game ─────────────────────────────────────────────
+window.startSetup = async function(){
+  const nm = document.getElementById('hostName').value.trim() || 'Host';
+  G.isHost=true; G.myIdx=0; G.myId=gid(12);
+  G.total=sc; G.types=[...st];
+  G.names=[nm];
+  for(let i=1;i<sc;i++) G.names.push(st[i]==='bot'?'Bot '+i:'Player '+(i+1));
+
+  const hasReal = G.types.slice(1).some(t=>t==='human');
+
+  if(!hasReal){
+    // Solo + bots only — no Firebase needed
+    cs(); initGame();
+    showScreen('game-screen'); renderGame(); return;
+  }
+
+  // Generate join codes for human slots (not host, not bot)
+  // mainCode = host's code (also the Firestore doc ID)
+  G.mainCode = gid(4);
+  G.codes = G.types.map((t,i) => {
+    if(i===0) return null;           // host has no join code
+    if(t==='bot') return null;       // bots have no join code
+    return gid(4);                   // unique code per human slot
+  });
+
+  ss({role:'host', myId:G.myId, myIdx:0, mainCode:G.mainCode,
+      codes:G.codes, total:G.total, types:G.types, names:G.names});
+
+  showScreen('waiting-screen');
+  renderCodes([]); renderSlots([]);
+  await createFB();
+};
+
+async function createFB(){
+  // Build players array
+  const players = G.names.map((n,i)=>({
+    name: n,
+    type: G.types[i],
+    joined: (i===0 || G.types[i]==='bot'), // host & bots pre-joined
+    id:   i===0 ? G.myId : (G.types[i]==='bot' ? 'bot' : null),
+    code: G.codes[i] || null
+  }));
+
+  // Main game document stored under mainCode
+  const mainData = {
+    hostId: G.myId,
+    total:  G.total,
+    types:  G.types,
+    names:  G.names,
+    players,
+    codes:  G.codes,
+    status: 'waiting',
+    created: new Date().toISOString(),
+    gameState: null
+  };
+
+  try{
+    // Write main game document
+    await setDoc(doc(db, COL, G.mainCode), mainData);
+
+    // Write alias documents for each human player's unique code
+    // Each alias just points to mainCode and their slot index
+    for(let i=1; i<G.total; i++){
+      const code = G.codes[i];
+      if(!code) continue; // skip bots
+      if(code === G.mainCode) continue; // safety (shouldn't happen)
+      await setDoc(doc(db, COL, code), {
+        isAlias: true,
+        mainCode: G.mainCode,
+        slot: i
+      });
+    }
+
+    showToast('Game created! Share the codes.', 'green');
+    // Always listen on the MAIN document
+    listenFB(G.mainCode);
+
+  }catch(e){
+    console.error('createFB error:', e);
+    showToast('Firebase error: '+e.message, 'red');
+  }
+}
+
+// ─── Join Game ────────────────────────────────────────────────
+window.joinGame = async function(){
+  const nm   = document.getElementById('joinName').value.trim() || 'Player';
+  const code = ['d0','d1','d2','d3'].map(id=>document.getElementById(id).value.toUpperCase()).join('');
+  if(code.length<4){ showToast('Enter full code!','red'); return; }
+
+  try{
+    // Step 1: look up the code document (may be alias or main)
+    const snap = await getDoc(doc(db, COL, code));
+    if(!snap.exists()){ showToast('Code not found!','red'); return; }
+    const d = snap.data();
+
+    let mainCode, slot;
+
+    if(d.isAlias){
+      mainCode = d.mainCode;
+      slot     = d.slot;
+    } else {
+      // Direct main code lookup (shouldn't happen in normal flow, but handle it)
+      showToast('Invalid code — use your player code, not the game code.','red');
+      return;
+    }
+
+    // Step 2: fetch main document
+    const ms = await getDoc(doc(db, COL, mainCode));
+    if(!ms.exists()){ showToast('Game not found!','red'); return; }
+    const m = ms.data();
+
+    if(m.status !== 'waiting'){ showToast('Game already started!','red'); return; }
+
+    // Step 3: verify slot is still open
+    const players = toArr(m.players, m.total);
+    if(!players[slot]){ showToast('Slot not found!','red'); return; }
+    if(players[slot].joined){ showToast('Slot already taken!','red'); return; }
+
+    // Step 4: claim the slot
+    G.myId     = gid(12);
+    G.mainCode = mainCode;
+    G.isHost   = false;
+    G.myIdx    = slot;
+    G.total    = m.total;
+    G.types    = toArr(m.types,  m.total);
+    G.codes    = toArr(m.codes,  m.total);
+    G.names    = toArr(m.names,  m.total);
+    G.names[slot] = nm;
+
+    // Update the players array — full overwrite (no dotted numeric keys)
+    players[slot] = { name:nm, type:'human', joined:true, id:G.myId, code };
+
+    await updateDoc(doc(db, COL, mainCode), {
+      players: players,
+      names:   G.names
+    });
+
+    ss({role:'joiner', myId:G.myId, myIdx:slot, mainCode,
+        codes:G.codes, total:G.total, types:G.types, names:G.names});
+
+    showToast('Joined! Waiting for host to start.', 'green');
+    showScreen('waiting-screen');
+    renderCodes(players); renderSlots(players);
+
+    // Listen on MAIN document only
+    listenFB(mainCode);
+
+  }catch(e){
+    console.error('joinGame error:', e);
+    showToast('Error: '+e.message, 'red');
+  }
+};
+
+// ─── Firebase Listener ────────────────────────────────────────
+// ALWAYS call with mainCode (the real game document ID, not an alias).
+function listenFB(mainCode){
+  if(G.unsub){ G.unsub(); G.unsub=null; }
+  G.unsub = onSnapshot(doc(db, COL, mainCode), snap=>{
+    if(!snap.exists()) return;
+    const d = snap.data();
+    if(d.isAlias) return; // safety guard
+    onFBUpdate(d);
+  }, err=>{
+    console.error('listenFB error:', err);
+  });
+}
+
+// ─── Handle incoming Firestore updates ───────────────────────
+function onFBUpdate(d){
+  const total = d.total || G.total;
+
+  if(d.status === 'waiting'){
+    G.total  = total;
+    G.names  = toArr(d.names,   total).length ? toArr(d.names,   total) : G.names;
+    G.types  = toArr(d.types,   total).length ? toArr(d.types,   total) : G.types;
+    G.codes  = toArr(d.codes,   total).length ? toArr(d.codes,   total) : G.codes;
+    const pl = toArr(d.players, total);
+
+    renderCodes(pl);
+    renderSlots(pl);
+
+    if(G.isHost){
+      // Enable Start only when all human slots (except host) are joined
+      let allJoined = true;
+      for(let i=1; i<total; i++){
+        if(G.types[i]==='human' && !(pl[i] && pl[i].joined)){
+          allJoined = false; break;
+        }
+      }
+      document.getElementById('startBtn').disabled = !allJoined;
+      document.getElementById('waitStatus').textContent =
+        allJoined ? 'All players ready! You can start.' : 'Waiting for players...';
+    }
+
+  } else if(d.status === 'playing' && d.gameState){
+    // ── KEY FIX: Every client (host + joiners) enters game here ──
+    const gs = d.gameState;
+
+    // Restore myIdx from session (critical for joiners)
+    const saved = ls();
+    if(saved && saved.myIdx !== undefined) G.myIdx = saved.myIdx;
+    if(saved && saved.myId  !== undefined) G.myId  = saved.myId;
+    if(saved && saved.isHost!== undefined) G.isHost= saved.role === 'host';
+
+    G.total  = total;
+    G.types  = toArr(d.types,  total).length ? toArr(d.types,  total) : G.types;
+    G.names  = toArr(d.names,  total).length ? toArr(d.names,  total) : G.names;
+
+    // Deserialize game state (handles JSON-stringified nested arrays)
+    deserializeGS(gs);
+    G.started = true;
+
+    // Show game screen for EVERYONE
+    showScreen('game-screen');
+    renderGame();
+
+    if(G.over) showWin(G.win);
+
+    // Only host drives bot turns to avoid race conditions
+    if(G.isHost) schedBot();
+  }
+}
+
+// ─── Serialize / Deserialize (Firestore can't store nested arrays) ───
+// We JSON-stringify hands (array of arrays) and deck/disc (flat arrays of objects).
+// Everything is stored as strings inside gameState.
+function serializeGS(){
+  return {
+    deck:  JSON.stringify(G.deck),   // flat array → string
+    hands: JSON.stringify(G.hands),  // nested array → string  ← KEY FIX
+    disc:  JSON.stringify(G.disc),   // flat array → string
+    cur:   G.cur,
+    dir:   G.dir,
+    dp:    G.dp,
+    co:    G.co  || null,
+    over:  G.over,
+    win:   G.win
+  };
+}
+
+function deserializeGS(gs){
+  // Parse back from strings (handle both old plain-array and new string format)
+  function parse(v){ return typeof v === 'string' ? JSON.parse(v) : (Array.isArray(v) ? v : toArr(v)); }
+  G.deck  = parse(gs.deck);
+  G.disc  = parse(gs.disc);
+  const rawHands = parse(gs.hands);
+  G.hands = Array.isArray(rawHands)
+    ? rawHands.map(h => Array.isArray(h) ? h : (typeof h === 'string' ? JSON.parse(h) : toArr(h)))
+    : [];
+  G.cur   = gs.cur  !== undefined ? gs.cur  : 0;
+  G.dir   = gs.dir  !== undefined ? gs.dir  : 1;
+  G.dp    = gs.dp   !== undefined ? gs.dp   : 0;
+  G.co    = gs.co   || null;
+  G.over  = gs.over || false;
+  G.win   = gs.win  !== undefined ? gs.win  : -1;
+}
+
+// ─── Push game state to Firestore ────────────────────────────
+async function pushFB(){
+  if(!G.mainCode) return;
+  try{
+    await updateDoc(doc(db, COL, G.mainCode), { gameState: serializeGS() });
+  }catch(e){
+    console.error('pushFB error:', e);
+    showToast('Sync error: '+e.message, 'red');
+  }
+}
+
+// ─── Waiting Room UI ─────────────────────────────────────────
+function renderCodes(pl){
+  const g = document.getElementById('codesGrid');
+  if(!g) return; g.innerHTML = '';
+  for(let i=1; i<G.total; i++){
+    const code = G.codes[i];
+    if(G.types[i]==='bot' || !code) continue;
+    const joined = pl && pl[i] && pl[i].joined;
+    const card = document.createElement('div'); card.className='code-card';
+    card.innerHTML =
+      '<div>'+
+        '<div style="font-size:12px;color:'+PCOL[i%PCOL.length]+';font-weight:700;margin-bottom:2px">Player '+(i+1)+'</div>'+
+        '<div class="ccode">'+code+'</div>'+
+        '<div style="font-size:11px;color:#777;margin-top:2px">Share this code</div>'+
+      '</div>'+
+      '<div class="cstatus '+(joined?'sj':'sw')+'">'+(joined?'&#x2705; Joined':'&#x23F3; Waiting')+'</div>';
+    g.appendChild(card);
+  }
+}
+
+function renderSlots(pl){
+  const c = document.getElementById('waitSlots');
+  if(!c) return; c.innerHTML = '';
+  for(let i=0; i<G.total; i++){
+    const p = pl && pl[i] ? pl[i] : {};
+    const t = G.types[i];
+    const n = G.names[i] || (t==='bot'?'Bot '+i:'Player '+(i+1));
+    const joined = t==='bot' || i===0 || p.joined;
+    const s = document.createElement('div'); s.className='pslot';
+    s.innerHTML =
+      '<div class="pav" style="background:'+PCOL[i%PCOL.length]+'20;color:'+PCOL[i%PCOL.length]+';border:2px solid '+PCOL[i%PCOL.length]+'40">'+
+        (t==='bot'?'&#x1F916;':n[0].toUpperCase())+
+      '</div>'+
+      '<span>'+n+'</span>'+
+      (i===0?'<span style="font-size:11px;color:#aaa;margin-left:4px">(Host)</span>':'')+
+      '<div class="sdot '+(t==='bot'?'dbt':joined?'don':'dw')+'" style="margin-left:auto"></div>';
+    c.appendChild(s);
+  }
+}
+
+// ─── Start Game (Host only) ───────────────────────────────────
+window.startGame = async function(){
+  if(!G.isHost) return;
+  initGame();
+  try{
+    // serializeGS() converts nested arrays to JSON strings — no Firestore error
+    await updateDoc(doc(db, COL, G.mainCode), { status:'playing', gameState: serializeGS() });
+  }catch(e){
+    console.error('startGame push error:', e);
+    showToast('Error starting game: '+e.message, 'red');
+    return;
+  }
+  // Host enters game immediately; joiners enter via onFBUpdate listener
+  showScreen('game-screen');
+  renderGame();
+  schedBot();
+};
+
+// ─── Card / Deck Logic ────────────────────────────────────────
+function buildDeck(sets){
+  const d=[];
+  for(let s=0;s<sets;s++){
+    for(const c of COLORS){
+      d.push({c,v:'0'});
+      for(let i=0;i<2;i++){
+        for(const n of['1','2','3','4','5','6','7','8','9']) d.push({c,v:n});
+        for(const sp of['skip','reverse','+2']) d.push({c,v:sp});
+      }
+    }
+    for(let i=0;i<4;i++){
+      d.push({c:'wild',v:'wild'});
+      d.push({c:'wild',v:'wild+4'});
+    }
+  }
+  return shuf(d);
+}
+function shuf(a){ const r=[...a]; for(let i=r.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [r[i],r[j]]=[r[j],r[i]]; } return r; }
+
+function initGame(){
+  const sets = Math.ceil(G.total/4);
+  G.deck = buildDeck(sets); G.hands=[];
+  for(let i=0;i<G.total;i++) G.hands.push(G.deck.splice(0,7));
+  let f; do{ f=G.deck.shift(); }while(f.c==='wild');
+  G.disc=[f]; G.cur=0; G.dir=1; G.dp=0; G.co=null; G.over=false; G.win=-1; G.started=true;
+}
+
+function top(){ return G.disc[G.disc.length-1]; }
+function ec(){  return G.co || top().c; }
+function canPlay(card){
+  if(G.dp>0){
+    const tv=top().v;
+    if(tv==='+2')     return card.v==='+2'||card.v==='wild+4';
+    if(tv==='wild+4') return card.v==='wild+4';
+    return false;
+  }
+  if(card.c==='wild') return true;
+  return card.c===ec() || card.v===top().v;
+}
+function nxt(f){ return (f+G.dir+G.total)%G.total; }
+function adv(skip){ G.cur=nxt(G.cur); if(skip) G.cur=nxt(G.cur); }
+function drawN(idx,n){ for(let i=0;i<n;i++){ if(!G.deck.length) reshuffle(); if(G.deck.length) G.hands[idx].push(G.deck.shift()); } }
+function reshuffle(){ const t=G.disc.pop(); G.deck=shuf(G.disc); G.disc=[t]; }
+
+function doPlay(pi,ci,color){
+  const card=G.hands[pi].splice(ci,1)[0];
+  G.disc.push(card); G.co=null;
+  if(card.v==='+2')        G.dp+=2;
+  else if(card.v==='wild+4'){ G.dp+=4; G.co=color||'red'; }
+  else if(card.c==='wild') { G.co=color||'red'; G.dp=0; }
+  else G.dp=0;
+  let skip=false;
+  if(card.v==='skip') skip=true;
+  if(card.v==='reverse'){ G.dir*=-1; if(G.total===2) skip=true; }
+  adv(skip);
+  if(G.hands[pi].length===0){ G.over=true; G.win=pi; }
+}
+
+// ─── Rendering ────────────────────────────────────────────────
+function lbl(c){
+  if(c.v==='skip')    return'&#x1F6AB;';
+  if(c.v==='reverse') return'&#x1F504;';
+  if(c.v==='+2')      return'+2';
+  if(c.v==='wild')    return'&#x1F308;';
+  if(c.v==='wild+4')  return'+4';
+  return c.v;
+}
+const CMAP={red:'cr',yellow:'cy',green:'cg',blue:'cb',wild:'cw'};
+
+function buildCard(card,play,dis){
+  const el=document.createElement('div');
+  el.className='ucard '+(CMAP[card.c]||'cr')+(play?' play':'')+(dis?' dis':'');
+  const l=lbl(card);
+  el.innerHTML='<div class="ccor">'+l+'</div><div class="ccen">'+l+'</div><div class="ccor bot">'+l+'</div>';
+  return el;
+}
+
+function renderGame(){
+  if(!G.started) return;
+  renderOpp(); renderCenter(); renderHand(); updUno();
+}
+
+function renderOpp(){
+  const area=document.getElementById('oppArea'); area.innerHTML='';
+  for(let i=0;i<G.total;i++){
+    if(i===G.myIdx) continue;
+    const hand=G.hands[i]||[]; const active=G.cur===i&&!G.over;
+    const div=document.createElement('div'); div.className='opp-hand'+(active?' at':'');
+    const show=Math.min(hand.length,10);
+    let ch=''; for(let j=0;j<show;j++) ch+='<div class="ocard"></div>';
+    div.innerHTML=
+      '<div class="opp-name" style="border-bottom:2px solid '+PCOL[i%PCOL.length]+'40">'+
+        (G.names[i]||'P'+(i+1))+(active?' &#x25C4;':'')+
+      '</div><div class="opp-cards">'+ch+'</div>'+
+      '<div class="ocnt" style="'+(hand.length===1?'background:rgba(230,57,70,.7)':'')+'">'+
+        hand.length+' card'+(hand.length!==1?'s':'')+'</div>';
+    area.appendChild(div);
+  }
+}
+
+function renderCenter(){
+  const tc=top();
+  const tcEl=document.getElementById('topCard'); tcEl.innerHTML='';
+  const cel=buildCard(tc,false,false); tcEl.appendChild(cel);
+  if(G.co){
+    const dot=document.createElement('div');
+    const cmap={red:'#e74c3c',yellow:'#f1c40f',green:'#2ecc71',blue:'#3498db'};
+    dot.style.cssText='position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:'+cmap[G.co]+';border:2px solid #fff;box-shadow:0 0 8px rgba(0,0,0,.5);';
+    tcEl.appendChild(dot);
+  }
+  document.getElementById('dirBadge').textContent=G.dir===1?'\u2192 CW':'\u2190 CCW';
+  const dc=document.getElementById('drawCnt');
+  if(G.dp>0){ dc.style.display='block'; dc.textContent='Stack: +'+G.dp; } else dc.style.display='none';
+  const mt=G.cur===G.myIdx&&!G.over;
+  document.getElementById('deckCard').className='deck-card'+(mt?' cd':'');
+  const ti=document.getElementById('turnInd');
+  if(mt){ ti.textContent='\uD83C\uDFAF Your Turn!'; ti.classList.add('show'); setTimeout(()=>ti.classList.remove('show'),2000); }
+}
+
+function renderHand(){
+  const cont=document.getElementById('myHand'); cont.innerHTML='';
+  const hand=G.hands[G.myIdx]||[]; const mt=G.cur===G.myIdx&&!G.over;
+  document.getElementById('myName').textContent=G.names[G.myIdx]||'You';
+  document.getElementById('myCnt').textContent=hand.length+' card'+(hand.length!==1?'s':'');
+  document.getElementById('pinfo').className='pinfo'+(mt?' mt':'');
+  hand.forEach((card,idx)=>{
+    const p=mt&&canPlay(card);
+    const el=buildCard(card,p,mt&&!p);
+    if(mt&&p) el.addEventListener('click',()=>onCard(idx));
+    cont.appendChild(el);
+  });
+}
+
+function updUno(){ const h=G.hands[G.myIdx]||[]; document.getElementById('unoBtn').style.display=h.length<=2&&!G.over?'block':'none'; }
+
+// ─── Player Actions ───────────────────────────────────────────
+function onCard(idx){
+  if(G.cur!==G.myIdx) return;
+  const card=G.hands[G.myIdx][idx];
+  if(!canPlay(card)) return;
+  if(card.c==='wild'){ G.pwIdx=idx; document.getElementById('colorPicker').classList.add('show'); }
+  else{ doPlay(G.myIdx,idx); afterPlay(); }
+}
+
+window.chooseColor = function(color){
+  document.getElementById('colorPicker').classList.remove('show');
+  if(G.pwIdx===null) return;
+  doPlay(G.myIdx,G.pwIdx,color); G.pwIdx=null; afterPlay();
+};
+
+window.drawCard = function(){
+  if(G.cur!==G.myIdx||G.over) return;
+  if(G.dp>0){
+    drawN(G.myIdx,G.dp);
+    showToast('Drew '+G.dp+' cards!','red');
+    G.dp=0; adv(false);
+  }else{
+    if(!G.deck.length) reshuffle();
+    const d=G.deck.shift(); G.hands[G.myIdx].push(d);
+    showToast('Drew a card!','yellow');
+    if(!canPlay(d)) adv(false);
+  }
+  afterPlay();
+};
+
+window.callUno = function(){ showToast('\uD83C\uDCCF UNO!','yellow'); };
+
+function afterPlay(){
+  renderGame();
+  if(G.over){
+    showWin(G.win);
+    if(G.mainCode) pushFB();
+    return;
+  }
+  if(G.mainCode) pushFB();
+  // Only host drives bots
+  if(G.isHost) schedBot();
+}
+
+// ─── Bot AI ───────────────────────────────────────────────────
+function schedBot(){
+  if(G.over) return;
+  const c=G.cur;
+  // Only run bots if we're host (or solo game with no mainCode)
+  if(G.types[c]==='bot' && (!G.mainCode || G.isHost)){
+    setTimeout(()=>botTurn(c), 900);
+  }
+}
+
+function botTurn(pi){
+  if(G.cur!==pi||G.over) return;
+  const hand=G.hands[pi];
+  const play=hand.map((c,i)=>({c,i})).filter(({c})=>canPlay(c));
+  if(G.dp>0){
+    const stk=play.find(({c})=>c.v==='+2'||c.v==='wild+4');
+    if(stk){
+      doPlay(pi,stk.i,COLORS[Math.floor(Math.random()*4)]);
+      showToast(G.names[pi]+' stacked!','red');
+    }else{
+      drawN(pi,G.dp);
+      showToast(G.names[pi]+' drew '+G.dp,'yellow');
+      G.dp=0; adv(false);
+    }
+  }else if(play.length>0){
+    const pick =
+      play.find(({c})=>c.v==='wild+4') ||
+      play.find(({c})=>c.v==='+2')     ||
+      play.find(({c})=>c.v==='skip')   ||
+      play.find(({c})=>c.v==='reverse')||
+      play[Math.floor(Math.random()*play.length)];
+    doPlay(pi,pick.i,COLORS[Math.floor(Math.random()*4)]);
+  }else{
+    if(!G.deck.length) reshuffle();
+    G.hands[pi].push(G.deck.shift()); adv(false);
+  }
+  if(G.over){
+    renderGame(); showWin(G.win);
+    if(G.mainCode) pushFB();
+    return;
+  }
+  renderGame();
+  if(G.mainCode) pushFB();
+  schedBot();
+}
+
+// ─── Win / End ────────────────────────────────────────────────
+function showWin(wi){
+  const n=G.names[wi]||'Player '+(wi+1); const me=wi===G.myIdx;
+  document.getElementById('winEmoji').textContent=me?'\uD83C\uDFC6':'\uD83D\uDE22';
+  document.getElementById('winTitle').textContent=me?'You Win!':n+' Wins!';
+  document.getElementById('winSub').textContent=me?'All cards played! \uD83C\uDF89':'Better luck next time!';
+  document.getElementById('winOverlay').classList.add('show');
+}
+
+window.restartGame = function(){
+  document.getElementById('winOverlay').classList.remove('show');
+  if(G.isHost){ initGame(); if(G.mainCode) pushFB(); renderGame(); }
+};
+
+window.goHome = function(){
+  document.getElementById('winOverlay').classList.remove('show');
+  if(G.unsub){ G.unsub(); G.unsub=null; }
+  cs();
+  G.mainCode=null; G.isHost=false; G.started=false; G.over=false; G.codes=[];
+  showScreen('lobby-screen');
+};
+
+// ─── Toast ────────────────────────────────────────────────────
+let tt;
+function showToast(msg,type){
+  const t=document.getElementById('toast');
+  t.innerHTML=msg; t.className='toast show '+(type||'');
+  clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ─── Code digit inputs ────────────────────────────────────────
+window.mvd = function(i){ const v=document.getElementById('d'+i).value; if(v&&i<3) document.getElementById('d'+(i+1)).focus(); };
+window.bkd = function(e,i){ if(e.key==='Backspace'&&!document.getElementById('d'+i).value&&i>0) document.getElementById('d'+(i-1)).focus(); };
+
+// ─── Session Restore ─────────────────────────────────────────
+async function restore(){
+  const s=ls(); if(!s||!s.mainCode) return;
+  try{
+    const snap=await getDoc(doc(db, COL, s.mainCode));
+    if(!snap.exists()){ cs(); return; }
+    const d=snap.data();
+    if(d.isAlias){ cs(); return; } // should never happen
+
+    G.myId    = s.myId;
+    G.myIdx   = s.myIdx;
+    G.mainCode= s.mainCode;
+    G.codes   = toArr(s.codes);
+    G.isHost  = s.role==='host';
+    G.total   = d.total;
+    G.types   = toArr(d.types, d.total);
+    G.names   = toArr(d.names, d.total);
+
+    if(d.status==='playing' && d.gameState){
+      const gs=d.gameState;
+      deserializeGS(gs);
+      G.started=true;
+      showScreen('game-screen'); renderGame();
+      if(G.over) showWin(G.win);
+      if(G.isHost) schedBot();
+    }else if(d.status==='waiting'){
+      showScreen('waiting-screen');
+      const pl=toArr(d.players, d.total);
+      renderCodes(pl); renderSlots(pl);
+    }
+
+    listenFB(s.mainCode);
+    showToast('Session restored!','green');
+  }catch(e){ console.error('restore error:',e); cs(); }
+}
+
+restore();
+</script>
+</body>
+</html>
