@@ -1,1 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LUDO Multiplayer</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+:root{
+  --red:#E63946;--yellow:#F4D03F;--green:#2ECC71;--blue:#3498DB;
+  --purple:#9b59b6;--orange:#e67e22;
+  --dark:#1a1a2e;--darker:#0d0d1a;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:var(--darker);color:#fff;min-height:100vh;overflow-x:hidden;}
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center;}
+#lobby-screen{background:radial-gradient(ellipse at top,#1a1a3e,#0d0d1a);padding:20px;}
+.logo{font-size:clamp(60px,15vw,120px);font-weight:900;letter-spacing:-4px;background:linear-gradient(135deg,#E63946,#F4D03F,#2ECC71,#3498DB);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin-bottom:8px;filter:drop-shadow(0 0 30px rgba(230,57,70,.4));animation:pulse 3s ease-in-out infinite;}
+@keyframes pulse{0%,100%{filter:drop-shadow(0 0 20px rgba(52,152,219,.4))}50%{filter:drop-shadow(0 0 50px rgba(52,152,219,.8))}}
+.tagline{color:#aaa;margin-bottom:40px;font-size:16px;letter-spacing:3px;text-transform:uppercase;}
+.lobby-btns{display:flex;flex-direction:column;gap:16px;width:100%;max-width:340px;}
+.btn{padding:16px 32px;border:none;border-radius:16px;font-family:'Nunito',sans-serif;font-size:18px;font-weight:700;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);opacity:0;transition:opacity .2s;}
+.btn:hover::after{opacity:1;}.btn:active{transform:scale(.97);}.btn:disabled{opacity:.5;cursor:not-allowed;}
+.btn-primary{background:linear-gradient(135deg,#E63946,#c0392b);color:#fff;box-shadow:0 8px 25px rgba(230,57,70,.4);}
+.btn-secondary{background:linear-gradient(135deg,#3498DB,#2980b9);color:#fff;box-shadow:0 8px 25px rgba(52,152,219,.4);}
+.btn-success{background:linear-gradient(135deg,#2ECC71,#27ae60);color:#fff;box-shadow:0 8px 25px rgba(46,204,113,.4);}
+.btn-dark{background:rgba(255,255,255,.1);color:#fff;border:2px solid rgba(255,255,255,.2);}
+.btn-sm{padding:10px 20px;font-size:14px;border-radius:10px;}
+.box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:32px;width:100%;max-width:500px;backdrop-filter:blur(10px);}
+.setup-title{font-size:26px;font-weight:900;margin-bottom:24px;text-align:center;}
+.form-group{margin-bottom:20px;}
+.form-label{display:block;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:8px;}
+.player-counter{display:flex;align-items:center;gap:16px;}
+.counter-btn{width:44px;height:44px;border:none;border-radius:12px;background:rgba(255,255,255,.15);color:#fff;font-size:22px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;}
+.counter-btn:hover{background:rgba(255,255,255,.3);transform:scale(1.05);}
+.counter-value{font-size:32px;font-weight:900;min-width:50px;text-align:center;}
+.board-hint{font-size:11px;color:#F4D03F;margin-top:4px;text-align:center;}
+.type-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,.05);border-radius:12px;margin-bottom:6px;font-weight:700;font-size:14px;}
+.toggle-grp{display:flex;gap:6px;}
+.tbtn{padding:6px 12px;border-radius:8px;border:none;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;background:rgba(255,255,255,.07);color:#aaa;}
+.tbtn.ah{background:#3498DB;color:#fff;}.tbtn.ab{background:#9b59b6;color:#fff;}
+.ninput{width:100%;padding:12px 16px;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;font-family:'Nunito',sans-serif;font-size:16px;font-weight:700;outline:none;transition:border-color .2s;}
+.ninput:focus{border-color:rgba(52,152,219,.6);}.ninput::placeholder{color:rgba(255,255,255,.3);}
+.setup-footer{display:flex;gap:12px;margin-top:24px;}.setup-footer .btn{flex:1;}
+.wait-title{font-size:22px;font-weight:900;text-align:center;margin-bottom:16px;}
+.codes-grid{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.code-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.ccode{font-size:28px;font-weight:900;letter-spacing:8px;background:linear-gradient(135deg,#F4D03F,#E63946);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.cstatus{font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+.sw{background:rgba(244,208,63,.15);color:#F4D03F;}.sj{background:rgba(46,204,113,.15);color:#2ECC71;}
+.pslot{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.06);border-radius:12px;font-weight:700;margin-bottom:6px;}
+.pav{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;flex-shrink:0;}
+.sdot{width:10px;height:10px;border-radius:50%;margin-left:auto;}
+.don{background:#2ECC71;box-shadow:0 0 8px #2ECC71;}.dbt{background:#9b59b6;box-shadow:0 0 8px #9b59b6;}.dw{background:rgba(255,255,255,.2);}
+.wait-footer{display:flex;gap:10px;margin-top:14px;}.wait-footer .btn{flex:1;}
+.code-inputs{display:flex;gap:10px;justify-content:center;margin:20px 0;}
+.cdig{width:56px;height:68px;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.15);border-radius:14px;color:#fff;font-family:'Nunito',sans-serif;font-size:28px;font-weight:900;text-align:center;outline:none;text-transform:uppercase;transition:border-color .2s;}
+.cdig:focus{border-color:#3498DB;}
+/* Game screen */
+#game-screen{background:#1a1a2e;padding:0;position:relative;overflow:hidden;align-items:stretch;justify-content:flex-start;}
+.game-wrapper{display:flex;flex-direction:column;height:100vh;width:100%;align-items:center;padding:8px;gap:6px;overflow:hidden;}
+.top-bar{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:640px;padding:6px 12px;background:rgba(0,0,0,.4);border-radius:14px;flex-shrink:0;}
+.dice-area{display:flex;align-items:center;gap:12px;flex-shrink:0;width:100%;max-width:640px;justify-content:center;}
+.dice-face{width:60px;height:60px;background:rgba(255,255,255,.95);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:34px;cursor:pointer;transition:transform .15s,box-shadow .15s;box-shadow:0 6px 20px rgba(0,0,0,.5);user-select:none;}
+.dice-face:hover.can-roll{transform:scale(1.08);}
+.dice-face.rolling{animation:rollAnim .5s ease;}
+@keyframes rollAnim{0%{transform:rotate(0)}25%{transform:rotate(-30deg) scale(1.15)}75%{transform:rotate(30deg) scale(1.15)}100%{transform:rotate(0) scale(1)}}
+.dice-face.can-roll{border:3px solid #F4D03F;box-shadow:0 0 18px rgba(244,208,63,.6);}
+.turn-badge{font-size:13px;font-weight:700;padding:6px 14px;border-radius:20px;background:rgba(0,0,0,.4);}
+.board-cont{flex:1;display:flex;align-items:center;justify-content:center;width:100%;overflow:hidden;}
+canvas#board{border-radius:12px;max-width:100%;max-height:100%;box-shadow:0 0 40px rgba(0,0,0,.6);}
+.token{width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;cursor:pointer;position:absolute;transition:all .3s;box-shadow:0 3px 8px rgba(0,0,0,.6);z-index:5;}
+.token:hover{transform:scale(1.25);}
+.token.movable{animation:glowT .8s ease-in-out infinite alternate;border-color:#F4D03F;}
+@keyframes glowT{from{box-shadow:0 3px 8px rgba(0,0,0,.6)}to{box-shadow:0 0 16px rgba(244,208,63,.9),0 3px 8px rgba(0,0,0,.6)}}
+.players-bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;flex-shrink:0;width:100%;max-width:640px;}
+.player-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;background:rgba(255,255,255,.07);border:2px solid transparent;transition:all .3s;}
+.player-chip.active{border-color:#F4D03F;background:rgba(244,208,63,.15);}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);background:rgba(20,20,40,.95);border:1px solid rgba(255,255,255,.1);padding:12px 24px;border-radius:30px;font-weight:700;font-size:15px;z-index:200;transition:transform .4s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;max-width:90vw;text-align:center;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.red{border-color:rgba(230,57,70,.5);}.toast.yellow{border-color:rgba(244,208,63,.5);color:#F4D03F;}.toast.green{border-color:rgba(46,204,113,.5);color:#2ECC71;}
+.winov{position:fixed;inset:0;background:rgba(0,0,0,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:150;opacity:0;pointer-events:none;transition:opacity .5s;}
+.winov.show{opacity:1;pointer-events:all;}
+.we{font-size:80px;margin-bottom:16px;animation:bns 1s ease-in-out infinite;}
+@keyframes bns{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
+.wt{font-size:42px;font-weight:900;margin-bottom:8px;}.ws{color:#aaa;margin-bottom:32px;font-size:18px;}.wbtns{display:flex;gap:14px;}
+.fb-loading{position:fixed;inset:0;background:rgba(13,13,26,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:300;gap:16px;}
+.fb-loading.hide{display:none;}
+.spinner{width:48px;height:48px;border:4px solid rgba(255,255,255,.1);border-top-color:#3498DB;border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:500px){.dice-face{width:50px;height:50px;font-size:28px;}}
+</style>
+</head>
+<body>
 
+<div class="fb-loading" id="fbLoading">
+  <div class="spinner"></div>
+  <div style="font-weight:700;color:#aaa;font-size:14px">Connecting...</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="winov" id="winOverlay">
+  <div class="we" id="winEmoji">🏆</div>
+  <div class="wt" id="winTitle">You Win!</div>
+  <div class="ws" id="winSub">First to home!</div>
+  <div class="wbtns">
+    <button class="btn btn-primary" onclick="restartGame()">Play Again</button>
+    <button class="btn btn-dark" onclick="goHome()">Home</button>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div class="screen active" id="lobby-screen">
+  <div class="logo">LUDO</div>
+  <p class="tagline">Classic Board Game</p>
+  <div class="lobby-btns">
+    <button class="btn btn-primary" onclick="showScreen('setup-screen')">🎮 Create Game</button>
+    <button class="btn btn-secondary" onclick="showScreen('join-screen')">🔗 Join Game</button>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div class="screen" id="setup-screen">
+  <div class="box" style="max-height:90vh;overflow-y:auto;">
+    <div class="setup-title">⚙️ Game Setup</div>
+    <div class="form-group">
+      <label class="form-label">Your Name</label>
+      <input type="text" class="ninput" id="hostName" placeholder="Enter your name" maxlength="15" value="Host">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Total Players</label>
+      <div class="player-counter">
+        <button class="counter-btn" onclick="changeCount(-1)">−</button>
+        <div>
+          <div class="counter-value" id="playerCount">2</div>
+          <div class="board-hint" id="boardHint">4-Player Board</div>
+        </div>
+        <button class="counter-btn" onclick="changeCount(1)">+</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Player Types</label>
+      <div id="typeRows"></div>
+    </div>
+    <div class="setup-footer">
+      <button class="btn btn-dark" onclick="showScreen('lobby-screen')">Back</button>
+      <button class="btn btn-success" onclick="startSetup()">Create Game →</button>
+    </div>
+  </div>
+</div>
+
+<!-- WAITING -->
+<div class="screen" id="waiting-screen">
+  <div class="box" style="max-width:520px;max-height:90vh;overflow-y:auto;">
+    <div class="wait-title">🎮 Waiting Room</div>
+    <p style="font-size:13px;color:#aaa;text-align:center;margin-bottom:14px">Share each player's unique code</p>
+    <div class="codes-grid" id="codesGrid"></div>
+    <div id="waitSlots"></div>
+    <div style="padding:10px;background:rgba(255,255,255,.05);border-radius:12px;font-size:13px;color:#aaa;text-align:center" id="waitStatus">Waiting for players...</div>
+    <div class="wait-footer">
+      <button class="btn btn-dark btn-sm" onclick="goHome()">Cancel</button>
+      <button class="btn btn-success" id="startBtn" onclick="startGame()" disabled>Start Game</button>
+    </div>
+  </div>
+</div>
+
+<!-- JOIN -->
+<div class="screen" id="join-screen">
+  <div class="box" style="max-width:400px;">
+    <div class="setup-title">🔗 Join Game</div>
+    <div class="form-group">
+      <label class="form-label">Your Name</label>
+      <input type="text" class="ninput" id="joinName" placeholder="Your name" maxlength="15" value="Player">
+    </div>
+    <label class="form-label" style="text-align:center;display:block">Your Join Code</label>
+    <div class="code-inputs">
+      <input class="cdig" id="d0" maxlength="1" oninput="mvd(0)" onkeydown="bkd(event,0)">
+      <input class="cdig" id="d1" maxlength="1" oninput="mvd(1)" onkeydown="bkd(event,1)">
+      <input class="cdig" id="d2" maxlength="1" oninput="mvd(2)" onkeydown="bkd(event,2)">
+      <input class="cdig" id="d3" maxlength="1" oninput="mvd(3)" onkeydown="bkd(event,3)">
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-dark" style="flex:1" onclick="showScreen('lobby-screen')">Back</button>
+      <button class="btn btn-secondary" style="flex:2" onclick="joinGame()">Join →</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="screen" id="game-screen">
+  <div class="game-wrapper">
+    <div class="top-bar">
+      <span style="font-weight:900;font-size:18px;letter-spacing:2px;">LUDO</span>
+      <div class="turn-badge" id="turnBadge">–</div>
+      <button class="btn btn-dark btn-sm" onclick="goHome()">🏠</button>
+    </div>
+    <div class="players-bar" id="playersBar"></div>
+    <div class="board-cont" id="boardCont">
+      <canvas id="board"></canvas>
+    </div>
+    <div class="dice-area">
+      <div class="dice-face" id="diceEl" onclick="rollDice()">🎲</div>
+      <div style="font-size:13px;color:#aaa;font-weight:700;" id="diceMsg">Roll the dice!</div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCA_jWl28aq5umyqxDBKEfgh9KVV8adpOE",
+  authDomain: "bike-showroom-app-d74fe.firebaseapp.com",
+  projectId: "bike-showroom-app-d74fe",
+  storageBucket: "bike-showroom-app-d74fe.firebasestorage.app",
+  messagingSenderId: "974534398147",
+  appId: "1:974534398147:web:8104d86439274e8b5e9276"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const COL = 'ludo-game';
+
+document.getElementById('fbLoading').classList.add('hide');
+
+// ─── Helpers ──────────────────────────────────────────────────
+const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const SS    = 'ludo_sess_v1';
+const PCOL  = ['#E63946','#2ECC71','#3498DB','#F4D03F','#9b59b6','#e67e22'];
+const PNAMES4 = ['Red','Green','Blue','Yellow'];
+const PNAMES6 = ['Red','Green','Blue','Yellow','Purple','Orange'];
+
+function gid(n){ return Array.from({length:n},()=>CHARS[Math.floor(Math.random()*CHARS.length)]).join(''); }
+function ss(o){ try{ sessionStorage.setItem(SS,JSON.stringify(o)); }catch(e){} }
+function ls(){ try{ const s=sessionStorage.getItem(SS); return s?JSON.parse(s):null; }catch(e){ return null; } }
+function cs(){ try{ sessionStorage.removeItem(SS); }catch(e){} }
+function toArr(v,len){
+  if(Array.isArray(v)) return v;
+  if(v&&typeof v==='object'){ const k=Object.keys(v); const n=len||(k.length?Math.max(...k.map(Number))+1:0); const a=[]; for(let i=0;i<n;i++) a.push(v[i]!==undefined?v[i]:null); return a; }
+  return [];
+}
+
+// ─── Global state ─────────────────────────────────────────────
+let G = {
+  total:2, types:[], names:[], isHost:false, myIdx:0, myId:null,
+  mainCode:null, codes:[], unsub:null,
+  board6:false, // true if 5-6 players
+  tokens:[], // [player][token_idx] = position (-1=home, 0-55=track, 56=finished)
+  cur:0, die:0, rolled:false, over:false, win:-1, started:false,
+  movable:[], // indices of tokens that can move
+  finishCount:[], // how many tokens each player has finished
+};
+
+let sc=2, st=['human','bot'];
+
+// ─── UI ───────────────────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+window.showScreen = showScreen;
+
+function changeCount(d){
+  sc = Math.max(2, Math.min(6, sc+d));
+  document.getElementById('playerCount').textContent = sc;
+  document.getElementById('boardHint').textContent = sc<=4 ? '4-Player Board' : '6-Player Board';
+  while(st.length<sc) st.push('bot');
+  st=st.slice(0,sc);
+  renderRows();
+}
+window.changeCount = changeCount;
+
+function renderRows(){
+  const c=document.getElementById('typeRows'); c.innerHTML='';
+  const nm = sc<=4 ? PNAMES4 : PNAMES6;
+  for(let i=0;i<sc;i++){
+    const r=document.createElement('div'); r.className='type-row';
+    const color=PCOL[i];
+    r.innerHTML=
+      '<span style="color:'+color+'">'+
+        (i===0?'You ('+nm[i]+')':nm[i])+
+      '</span>'+
+      '<div class="toggle-grp">'+
+        '<button class="tbtn '+(st[i]==='human'?'ah':'')+'" '+(i===0?'disabled':'')+
+          ' onclick="stype('+i+',\'human\')">👤 Human</button>'+
+        '<button class="tbtn '+(st[i]==='bot'?'ab':'')+'" '+(i===0?'disabled':'')+
+          ' onclick="stype('+i+',\'bot\')">🤖 Bot</button>'+
+      '</div>';
+    c.appendChild(r);
+  }
+}
+window.stype=function(i,t){ st[i]=t; renderRows(); };
+renderRows();
+
+// ─── Create game ─────────────────────────────────────────────
+window.startSetup = async function(){
+  const nm=document.getElementById('hostName').value.trim()||'Host';
+  G.isHost=true; G.myIdx=0; G.myId=gid(12);
+  G.total=sc; G.types=[...st]; G.board6=sc>4;
+  const pnm=sc<=4?PNAMES4:PNAMES6;
+  G.names=[nm];
+  for(let i=1;i<sc;i++) G.names.push(st[i]==='bot'?pnm[i]+' Bot':pnm[i]);
+
+  const hasReal=G.types.slice(1).some(t=>t==='human');
+  if(!hasReal){
+    cs(); initGame(); showScreen('game-screen'); renderGame(); return;
+  }
+
+  G.mainCode=gid(4);
+  G.codes=G.types.map((t,i)=>{ if(i===0||t==='bot') return null; return gid(4); });
+  ss({role:'host',myId:G.myId,myIdx:0,mainCode:G.mainCode,codes:G.codes,total:G.total,types:G.types,names:G.names,board6:G.board6});
+  showScreen('waiting-screen');
+  renderCodes([]); renderSlots([]);
+  await createFB();
+};
+
+async function createFB(){
+  const players=G.names.map((n,i)=>({name:n,type:G.types[i],joined:(i===0||G.types[i]==='bot'),id:i===0?G.myId:(G.types[i]==='bot'?'bot':null),code:G.codes[i]||null}));
+  const mainData={hostId:G.myId,total:G.total,types:G.types,names:G.names,players,codes:G.codes,board6:G.board6,status:'waiting',created:new Date().toISOString(),gameState:null};
+  try{
+    await setDoc(doc(db,COL,G.mainCode),mainData);
+    for(let i=1;i<G.total;i++){
+      const code=G.codes[i]; if(!code||code===G.mainCode) continue;
+      await setDoc(doc(db,COL,code),{isAlias:true,mainCode:G.mainCode,slot:i});
+    }
+    showToast('Game created! Share the codes.','green');
+    listenFB(G.mainCode);
+  }catch(e){ showToast('Firebase error: '+e.message,'red'); }
+}
+
+// ─── Join game ────────────────────────────────────────────────
+window.joinGame = async function(){
+  const nm=document.getElementById('joinName').value.trim()||'Player';
+  const code=['d0','d1','d2','d3'].map(id=>document.getElementById(id).value.toUpperCase()).join('');
+  if(code.length<4){ showToast('Enter full code!','red'); return; }
+  try{
+    const snap=await getDoc(doc(db,COL,code));
+    if(!snap.exists()){ showToast('Code not found!','red'); return; }
+    const d=snap.data();
+    if(!d.isAlias){ showToast('Use your player code!','red'); return; }
+    const mainCode=d.mainCode, slot=d.slot;
+    const ms=await getDoc(doc(db,COL,mainCode));
+    if(!ms.exists()){ showToast('Game not found!','red'); return; }
+    const m=ms.data();
+    if(m.status!=='waiting'){ showToast('Game already started!','red'); return; }
+    const players=toArr(m.players,m.total);
+    if(!players[slot]){ showToast('Slot not found!','red'); return; }
+    if(players[slot].joined){ showToast('Slot taken!','red'); return; }
+    G.myId=gid(12); G.mainCode=mainCode; G.isHost=false; G.myIdx=slot;
+    G.total=m.total; G.types=toArr(m.types,m.total); G.codes=toArr(m.codes,m.total);
+    G.names=toArr(m.names,m.total); G.board6=m.board6||false;
+    G.names[slot]=nm;
+    players[slot]={name:nm,type:'human',joined:true,id:G.myId,code};
+    await updateDoc(doc(db,COL,mainCode),{players,names:G.names});
+    ss({role:'joiner',myId:G.myId,myIdx:slot,mainCode,codes:G.codes,total:G.total,types:G.types,names:G.names,board6:G.board6});
+    showToast('Joined! Waiting for host.','green');
+    showScreen('waiting-screen');
+    renderCodes(players); renderSlots(players);
+    listenFB(mainCode);
+  }catch(e){ showToast('Error: '+e.message,'red'); }
+};
+
+// ─── Firebase ─────────────────────────────────────────────────
+function listenFB(mainCode){
+  if(G.unsub){ G.unsub(); G.unsub=null; }
+  G.unsub=onSnapshot(doc(db,COL,mainCode),snap=>{
+    if(!snap.exists()) return;
+    const d=snap.data();
+    if(d.isAlias) return;
+    onFBUpdate(d);
+  },err=>console.error('listen error:',err));
+}
+
+function onFBUpdate(d){
+  const total=d.total||G.total;
+  if(d.status==='waiting'){
+    G.total=total; G.names=toArr(d.names,total); G.types=toArr(d.types,total); G.codes=toArr(d.codes,total);
+    const pl=toArr(d.players,total);
+    renderCodes(pl); renderSlots(pl);
+    if(G.isHost){
+      let allJoined=true;
+      for(let i=1;i<total;i++){ if(G.types[i]==='human'&&!(pl[i]&&pl[i].joined)){ allJoined=false; break; } }
+      document.getElementById('startBtn').disabled=!allJoined;
+      document.getElementById('waitStatus').textContent=allJoined?'All ready! You can start.':'Waiting for players...';
+    }
+  } else if(d.status==='playing'&&d.gameState){
+    const saved=ls();
+    if(saved&&saved.myIdx!==undefined) G.myIdx=saved.myIdx;
+    if(saved&&saved.myId!==undefined)  G.myId=saved.myId;
+    if(saved&&saved.isHost!==undefined) G.isHost=saved.role==='host';
+    G.total=total; G.types=toArr(d.types,total); G.names=toArr(d.names,total); G.board6=d.board6||false;
+    deserializeGS(d.gameState);
+    G.started=true;
+    showScreen('game-screen'); renderGame();
+    if(G.over) showWin(G.win);
+    else if(G.isHost) schedBot();
+  }
+}
+
+function serializeGS(){
+  return {
+    tokens: JSON.stringify(G.tokens),
+    cur:G.cur, die:G.die, rolled:G.rolled,
+    over:G.over, win:G.win,
+    finishCount:JSON.stringify(G.finishCount)
+  };
+}
+
+function deserializeGS(gs){
+  function p(v){ return typeof v==='string'?JSON.parse(v):v; }
+  G.tokens=p(gs.tokens); G.cur=gs.cur||0; G.die=gs.die||0;
+  G.rolled=gs.rolled||false; G.over=gs.over||false; G.win=gs.win!==undefined?gs.win:-1;
+  G.finishCount=p(gs.finishCount||'[]')||new Array(G.total).fill(0);
+  computeMovable();
+}
+
+async function pushFB(){
+  if(!G.mainCode) return;
+  try{ await updateDoc(doc(db,COL,G.mainCode),{gameState:serializeGS()}); }
+  catch(e){ console.error('push error:',e); }
+}
+
+// ─── Waiting room UI ─────────────────────────────────────────
+function renderCodes(pl){
+  const g=document.getElementById('codesGrid'); if(!g) return; g.innerHTML='';
+  for(let i=1;i<G.total;i++){
+    const code=G.codes[i]; if(G.types[i]==='bot'||!code) continue;
+    const joined=pl&&pl[i]&&pl[i].joined;
+    const card=document.createElement('div'); card.className='code-card';
+    card.innerHTML=
+      '<div><div style="font-size:12px;color:'+PCOL[i]+';font-weight:700;margin-bottom:2px">Player '+(i+1)+'</div>'+
+      '<div class="ccode">'+code+'</div><div style="font-size:11px;color:#777;margin-top:2px">Share this code</div></div>'+
+      '<div class="cstatus '+(joined?'sj':'sw')+'">'+(joined?'✅ Joined':'⏳ Waiting')+'</div>';
+    g.appendChild(card);
+  }
+}
+
+function renderSlots(pl){
+  const c=document.getElementById('waitSlots'); if(!c) return; c.innerHTML='';
+  const nm=G.board6?PNAMES6:PNAMES4;
+  for(let i=0;i<G.total;i++){
+    const p=pl&&pl[i]?pl[i]:{};
+    const t=G.types[i]; const joined=t==='bot'||i===0||p.joined;
+    const s=document.createElement('div'); s.className='pslot';
+    const displayName=G.names[i]||(t==='bot'?nm[i]+' Bot':nm[i]);
+    s.innerHTML=
+      '<div class="pav" style="background:'+PCOL[i]+'20;color:'+PCOL[i]+';border:2px solid '+PCOL[i]+'40">'+
+        (t==='bot'?'🤖':displayName[0].toUpperCase())+
+      '</div><span>'+displayName+'</span>'+
+      (i===0?'<span style="font-size:11px;color:#aaa;margin-left:4px">(Host)</span>':'')+
+      '<div class="sdot '+(t==='bot'?'dbt':joined?'don':'dw')+'" style="margin-left:auto"></div>';
+    c.appendChild(s);
+  }
+}
+
+// ─── Start Game ───────────────────────────────────────────────
+window.startGame = async function(){
+  if(!G.isHost) return;
+  initGame();
+  try{
+    await updateDoc(doc(db,COL,G.mainCode),{status:'playing',gameState:serializeGS()});
+  }catch(e){ showToast('Error: '+e.message,'red'); return; }
+  showScreen('game-screen'); renderGame(); schedBot();
+};
+
+// ─── Ludo Game Logic ─────────────────────────────────────────
+// 4-player: main track 0-51, home stretch 52-57 per player, finished=58
+// 6-player: main track 0-59, home stretch 60-65 per player, finished=66
+
+const TOKENS_PER_PLAYER = 4;
+
+// 4-player board: each player's start cell on main track
+const START4 = [0, 13, 26, 39];
+// Safe cells on 4-player board
+const SAFE4  = [0,8,13,21,26,34,39,47];
+// 6-player board starts
+const START6 = [0, 10, 20, 30, 40, 50];
+const SAFE6  = [0,7,10,17,20,27,30,37,40,47,50,57];
+
+function initGame(){
+  G.board6 = G.total > 4;
+  G.tokens = [];
+  G.finishCount = new Array(G.total).fill(0);
+  for(let i=0;i<G.total;i++){
+    G.tokens.push(new Array(TOKENS_PER_PLAYER).fill(-1)); // -1 = in home yard
+  }
+  G.cur=0; G.die=0; G.rolled=false; G.over=false; G.win=-1;
+  G.movable=[];
+  G.started=true;
+}
+
+function trackLen(){ return G.board6 ? 60 : 52; }
+function homeStretchLen(){ return 6; }
+function finishedVal(){ return trackLen() + homeStretchLen(); }
+function startCell(pi){ return G.board6 ? START6[pi] : START4[pi]; }
+function safeList(){ return G.board6 ? SAFE6 : SAFE4; }
+
+// Convert absolute track pos to player-relative pos
+function relPos(pi, absPos){
+  // relative to player's start
+  const s = startCell(pi);
+  const tl = trackLen();
+  return ((absPos - s + tl) % tl);
+}
+
+function absPos(pi, relP){
+  const s = startCell(pi);
+  const tl = trackLen();
+  return (s + relP) % tl;
+}
+
+// Get token position: negative = in yard, finishedVal() = done
+// For positions 0..trackLen()-1: on main track (absolute)
+// For trackLen()..trackLen()+5: in home stretch
+function canEnterHome(pi, token){
+  // A token can enter home stretch when it's gone full circle
+  // trackLen() - 1 relative means about to enter home stretch
+  return token !== -1 && token < trackLen();
+}
+
+function moveToken(pi, ti, steps){
+  const tl = trackLen();
+  const fv = finishedVal();
+  const homeBase = tl; // home stretch starts here
+  let pos = G.tokens[pi][ti];
+
+  if(pos === -1){
+    // Enter from yard: need to roll 6
+    if(steps !== 6) return false;
+    G.tokens[pi][ti] = startCell(pi);
+    return true;
+  }
+
+  if(pos >= homeBase){
+    // In home stretch
+    const newPos = pos + steps;
+    if(newPos > fv) return false; // overshoot
+    G.tokens[pi][ti] = newPos;
+    if(newPos === fv){ G.finishCount[pi]++; }
+    return true;
+  }
+
+  // On main track
+  const rel = relPos(pi, pos);
+  const newRel = rel + steps;
+
+  if(newRel === tl){
+    // Enters home stretch at position homeBase
+    G.tokens[pi][ti] = homeBase;
+    return true;
+  }
+  if(newRel > tl){
+    // Would go past entry, check if fits in home stretch
+    const hsPos = homeBase + (newRel - tl);
+    if(hsPos > fv) return false;
+    G.tokens[pi][ti] = hsPos;
+    if(hsPos === fv){ G.finishCount[pi]++; }
+    return true;
+  }
+
+  // Normal move on track
+  const newAbs = absPos(pi, newRel);
+  G.tokens[pi][ti] = newAbs;
+
+  // Check capture: remove opponent tokens (not on safe cells, not in home)
+  const safe = safeList();
+  if(!safe.includes(newAbs)){
+    for(let op=0;op<G.total;op++){
+      if(op===pi) continue;
+      for(let ot=0;ot<TOKENS_PER_PLAYER;ot++){
+        if(G.tokens[op][ot]===newAbs){
+          G.tokens[op][ot]=-1; // send back
+          showToast(G.names[pi]+' captured '+G.names[op]+'! 💥','red');
+        }
+      }
+    }
+  }
+  return true;
+}
+
+function computeMovable(){
+  G.movable = [];
+  if(!G.rolled || G.over) return;
+  const tl = trackLen(), fv = finishedVal();
+  for(let ti=0;ti<TOKENS_PER_PLAYER;ti++){
+    const pos = G.tokens[G.cur][ti];
+    if(pos === fv) continue; // already finished
+    if(pos === -1){
+      if(G.die === 6) G.movable.push(ti);
+      continue;
+    }
+    // Try virtual move
+    const homeBase = tl;
+    let ok = false;
+    if(pos >= homeBase){
+      ok = (pos + G.die <= fv);
+    } else {
+      const rel = relPos(G.cur, pos);
+      const newRel = rel + G.die;
+      if(newRel === tl){ ok = true; }
+      else if(newRel > tl){ ok = (homeBase+(newRel-tl) <= fv); }
+      else ok = true;
+    }
+    if(ok) G.movable.push(ti);
+  }
+}
+
+function nextPlayer(){
+  // Skip if only 1 left or all finished
+  let n = (G.cur + 1) % G.total;
+  for(let i=0;i<G.total;i++){
+    if(G.finishCount[n] < TOKENS_PER_PLAYER) break;
+    n = (n+1)%G.total;
+  }
+  G.cur = n; G.rolled=false; G.die=0; G.movable=[];
+}
+
+function checkWin(){
+  for(let i=0;i<G.total;i++){
+    if(G.finishCount[i]===TOKENS_PER_PLAYER){ G.over=true; G.win=i; return true; }
+  }
+  return false;
+}
+
+// ─── Dice & moves (human) ─────────────────────────────────────
+window.rollDice = function(){
+  if(G.cur!==G.myIdx||G.rolled||G.over) return;
+  if(G.mainCode && !G.isHost){ // joiner: any turn is theirs when myIdx===cur
+    if(G.cur!==G.myIdx) return;
+  }
+  doRoll(G.myIdx);
+};
+
+function doRoll(pi){
+  if(G.rolled) return;
+  G.die = Math.floor(Math.random()*6)+1;
+  G.rolled = true;
+  computeMovable();
+
+  // animate dice
+  const de=document.getElementById('diceEl');
+  de.classList.add('rolling');
+  setTimeout(()=>de.classList.remove('rolling'),500);
+
+  if(G.movable.length===0){
+    // No moves, skip
+    setTimeout(()=>{
+      showToast('No moves! Turn skipped.','yellow');
+      if(G.die!==6) nextPlayer();
+      else G.rolled=false; // rolled 6 but no token out, give another roll
+      G.movable=[];
+      afterAction();
+    },600);
+    return;
+  }
+
+  if(G.movable.length===1 && G.types[pi]==='human'){
+    // Auto-move only one option
+  }
+
+  renderGame();
+  if(G.mainCode) pushFB();
+};
+
+window.clickToken = function(pi, ti){
+  if(G.cur !== G.myIdx || pi !== G.myIdx || !G.rolled) return;
+  if(!G.movable.includes(ti)){ showToast('Cannot move this token!','red'); return; }
+  moveToken(G.myIdx, ti, G.die);
+  const bonus = G.die===6;
+  checkWin();
+  if(!bonus) nextPlayer();
+  else { G.rolled=false; G.movable=[]; showToast('🎲 Rolled 6! Roll again!','green'); }
+  afterAction();
+};
+
+function afterAction(){
+  computeMovable();
+  renderGame();
+  if(G.over){ showWin(G.win); if(G.mainCode) pushFB(); return; }
+  if(G.mainCode) pushFB();
+  if(G.isHost || !G.mainCode) schedBot();
+}
+
+// ─── Bot AI ───────────────────────────────────────────────────
+function schedBot(){
+  if(G.over) return;
+  const c=G.cur;
+  if(G.types[c]==='bot'&&(!G.mainCode||G.isHost)){
+    setTimeout(()=>botTurn(c),900);
+  }
+}
+
+function botTurn(pi){
+  if(G.cur!==pi||G.over) return;
+  if(!G.rolled){
+    G.die=Math.floor(Math.random()*6)+1;
+    G.rolled=true; computeMovable();
+    renderGame();
+    if(G.mainCode) pushFB();
+    setTimeout(()=>botTurn(pi),700);
+    return;
+  }
+  if(G.movable.length===0){
+    if(G.die!==6) nextPlayer(); else G.rolled=false;
+    G.movable=[];
+    renderGame();
+    if(G.mainCode) pushFB();
+    schedBot(); return;
+  }
+  // Smart bot: prefer captures, then enter, then advance furthest
+  const fv=finishedVal(), tl=trackLen();
+  let pick=G.movable[0];
+
+  // Check capture
+  for(const ti of G.movable){
+    const pos=G.tokens[pi][ti];
+    if(pos===-1) continue;
+    const newRel = relPos(pi,pos) + G.die;
+    if(newRel < tl){
+      const newAbs = absPos(pi,newRel);
+      const safe=safeList();
+      if(!safe.includes(newAbs)){
+        for(let op=0;op<G.total;op++){
+          if(op===pi) continue;
+          for(let ot=0;ot<TOKENS_PER_PLAYER;ot++){
+            if(G.tokens[op][ot]===newAbs){ pick=ti; break; }
+          }
+        }
+      }
+    }
+  }
+
+  // Enter token if die is 6
+  if(G.die===6){
+    const inYard=G.movable.filter(ti=>G.tokens[pi][ti]===-1);
+    if(inYard.length) pick=inYard[0];
+  }
+
+  moveToken(pi,pick,G.die);
+  const bonus=G.die===6;
+  checkWin();
+  if(!bonus) nextPlayer(); else { G.rolled=false; G.movable=[]; }
+
+  computeMovable();
+  renderGame();
+  if(G.over){ showWin(G.win); if(G.mainCode) pushFB(); return; }
+  if(G.mainCode) pushFB();
+  if(bonus) setTimeout(()=>botTurn(pi),700); else schedBot();
+}
+
+// ─── RENDERING ───────────────────────────────────────────────
+let boardSize = 520;
+const B6 = false; // flag reference
+
+function renderGame(){
+  if(!G.started) return;
+  resizeBoard();
+  drawBoard();
+  drawTokens();
+  renderPlayersBar();
+  renderDice();
+}
+
+function resizeBoard(){
+  const cont=document.getElementById('boardCont');
+  const sz=Math.min(cont.clientWidth, cont.clientHeight, 560);
+  boardSize=sz;
+  const cv=document.getElementById('board');
+  cv.width=sz; cv.height=sz;
+}
+
+// ─── Board Drawing ────────────────────────────────────────────
+function drawBoard(){
+  const cv=document.getElementById('board');
+  const ctx=cv.getContext('2d');
+  const sz=boardSize;
+  ctx.clearRect(0,0,sz,sz);
+
+  if(G.board6) drawBoard6(ctx,sz);
+  else drawBoard4(ctx,sz);
+}
+
+// ─── 4-Player Board ───────────────────────────────────────────
+function drawBoard4(ctx, sz){
+  const g=15; // grid units (15x15)
+  const cs=sz/g; // cell size
+
+  // Fill background
+  ctx.fillStyle='#f5f5f5'; ctx.fillRect(0,0,sz,sz);
+
+  // Draw colored home zones (3x3 yard zones in corners)
+  const zones=[
+    {x:0,y:0,c:'#E63946'},       // Red TL
+    {x:9,y:0,c:'#2ECC71'},       // Green TR
+    {x:0,y:9,c:'#3498DB'},       // Blue BL
+    {x:9,y:9,c:'#F4D03F'},       // Yellow BR
+  ];
+  zones.forEach(z=>{
+    ctx.fillStyle=z.c+'cc';
+    ctx.fillRect(z.x*cs,z.y*cs,6*cs,6*cs);
+    // inner circle area
+    ctx.fillStyle='rgba(255,255,255,0.4)';
+    ctx.fillRect((z.x+.5)*cs,(z.y+.5)*cs,5*cs,5*cs);
+    // 4 token positions
+    const spots=[[1.5,1.5],[3.5,1.5],[1.5,3.5],[3.5,3.5]];
+    spots.forEach(([dx,dy])=>{
+      ctx.fillStyle='rgba(255,255,255,.7)';
+      ctx.beginPath(); ctx.arc((z.x+dx)*cs,(z.y+dy)*cs,cs*0.55,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle=z.c; ctx.lineWidth=3; ctx.stroke();
+    });
+  });
+
+  // Draw main track (52 cells) and home stretches
+  // Track path: all the cell centers around the board
+  const track=getTrack4(cs);
+
+  // Draw track cells
+  track.forEach((cell,i)=>{
+    const {x,y}=cell;
+    const safe=SAFE4.includes(i);
+    ctx.fillStyle=safe?'#ffe082':'#ffffff';
+    ctx.strokeStyle='#bbb'; ctx.lineWidth=1;
+    ctx.fillRect(x-cs*.45,y-cs*.45,cs*.9,cs*.9);
+    ctx.strokeRect(x-cs*.45,y-cs*.45,cs*.9,cs*.9);
+    if(safe){ ctx.fillStyle='rgba(255,200,0,.3)'; ctx.fillRect(x-cs*.45,y-cs*.45,cs*.9,cs*.9); }
+    // Color starting cells
+    const startColors={0:'#E63946aa',13:'#2ECC71aa',26:'#3498DBaa',39:'#F4D03Faa'};
+    if(startColors[i]){ ctx.fillStyle=startColors[i]; ctx.fillRect(x-cs*.45,y-cs*.45,cs*.9,cs*.9); }
+  });
+
+  // Home stretches (6 cells each leading to center)
+  const hs=getHomeStretch4(cs);
+  hs.forEach(({cells,color})=>{
+    cells.forEach((cell,i)=>{
+      ctx.fillStyle=i===5?color:'#fff';
+      ctx.strokeStyle='#bbb'; ctx.lineWidth=1;
+      ctx.fillRect(cell.x-cs*.45,cell.y-cs*.45,cs*.9,cs*.9);
+      ctx.strokeRect(cell.x-cs*.45,cell.y-cs*.45,cs*.9,cs*.9);
+      if(i<5){ ctx.fillStyle=color+'66'; ctx.fillRect(cell.x-cs*.45,cell.y-cs*.45,cs*.9,cs*.9); }
+    });
+  });
+
+  // Center star
+  ctx.save();
+  const cx=sz/2, cy=sz/2, r=cs*2.2;
+  const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+  grad.addColorStop(0,'#fff'); grad.addColorStop(.3,'#f0f0f0'); grad.addColorStop(1,'#ddd');
+  ctx.fillStyle=grad;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#ccc'; ctx.lineWidth=2; ctx.stroke();
+
+  // Star triangles for finish
+  [['#E63946',Math.PI*.5],['#2ECC71',-Math.PI*.5],['#3498DB',Math.PI],['#F4D03F',0]].forEach(([col,angle])=>{
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(angle);
+    ctx.fillStyle=col+'99';
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-cs*.8,cs*1.8); ctx.lineTo(cs*.8,cs*1.8); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  });
+  ctx.restore();
+
+  window._track4=track;
+  window._hs4=hs;
+}
+
+function getTrack4(cs){
+  const cells=[];
+  // Generate 52 track positions as cell centers
+  // Standard Ludo 15x15 grid, track occupies the border cells of the middle strip
+  // Col 0 is leftmost, row 0 is topmost. Track cells in grid coords:
+  const path=[
+    // Bottom-left → going up (col 6, rows 14..9) — Red home column section
+    [6,14],[6,13],[6,12],[6,11],[6,10],[6,9],
+    // Turn right top-left (row 9, col 5..0? No: col 7,8 inner)
+    // Actually: standard Ludo path row by row
+    // Let me use a fixed coordinate path
+    // Red starts at [6,14] going up
+  ];
+  // Use a pre-defined 52-step path on a 15x15 grid
+  const raw=[
+    [6,14],[6,13],[6,12],[6,11],[6,10],[6,9],
+    [5,8],[4,8],[3,8],[2,8],[1,8],[0,8],
+    [0,7],
+    [0,6],[1,6],[2,6],[3,6],[4,6],[5,6],
+    [6,5],[6,4],[6,3],[6,2],[6,1],[6,0],
+    [7,0],
+    [8,0],[8,1],[8,2],[8,3],[8,4],[8,5],
+    [9,6],[10,6],[11,6],[12,6],[13,6],[14,6],
+    [14,7],
+    [14,8],[13,8],[12,8],[11,8],[10,8],[9,8],
+    [8,9],[8,10],[8,11],[8,12],[8,13],[8,14],
+    [7,14],
+  ];
+  return raw.map(([col,row])=>({x:(col+.5)*cs, y:(row+.5)*cs}));
+}
+
+function getHomeStretch4(cs){
+  // Each player's home stretch: 6 cells leading to center
+  const cx=7, cy=7; // center grid
+  return [
+    { color:'#E63946', cells:[[7,13],[7,12],[7,11],[7,10],[7,9],[7,7]].map(([c,r])=>({x:(c+.5)*cs,y:(r+.5)*cs})) },
+    { color:'#2ECC71', cells:[[1,7],[2,7],[3,7],[4,7],[5,7],[7,7]].map(([c,r])=>({x:(c+.5)*cs,y:(r+.5)*cs})) },
+    { color:'#3498DB', cells:[[7,1],[7,2],[7,3],[7,4],[7,5],[7,7]].map(([c,r])=>({x:(c+.5)*cs,y:(r+.5)*cs})) },
+    { color:'#F4D03F', cells:[[13,7],[12,7],[11,7],[10,7],[9,7],[7,7]].map(([c,r])=>({x:(c+.5)*cs,y:(r+.5)*cs})) },
+  ];
+}
+
+// ─── 6-Player Board ───────────────────────────────────────────
+function drawBoard6(ctx, sz){
+  // 6-player ludo: hexagonal-ish layout. We'll use a wide rectangular board
+  // divided into 6 zones. Use a 20x20 grid.
+  const g=20; const cs=sz/g;
+  ctx.fillStyle='#f5f5f5'; ctx.fillRect(0,0,sz,sz);
+
+  const pcolors=['#E63946','#2ECC71','#3498DB','#F4D03F','#9b59b6','#e67e22'];
+  // Home yards: 4x4 corner/side patches
+  const yards=[
+    {x:0,y:0},{x:14,y:0},   // top
+    {x:0,y:8},{x:14,y:8},   // middle
+    {x:0,y:14},{x:14,y:14}, // bottom... actually let's simplify
+  ];
+
+  // Draw track
+  const track=getTrack6(cs);
+  track.forEach((cell,i)=>{
+    const safe=SAFE6.includes(i);
+    ctx.fillStyle=safe?'#ffe082':'#fff';
+    ctx.strokeStyle='#ccc'; ctx.lineWidth=1;
+    ctx.fillRect(cell.x-cs*.42,cell.y-cs*.42,cs*.84,cs*.84);
+    ctx.strokeRect(cell.x-cs*.42,cell.y-cs*.42,cs*.84,cs*.84);
+    if(safe){ ctx.fillStyle='rgba(255,200,0,.3)'; ctx.fillRect(cell.x-cs*.42,cell.y-cs*.42,cs*.84,cs*.84); }
+    const sc6={0:'#E63946aa',10:'#2ECC71aa',20:'#3498DBaa',30:'#F4D03Faa',40:'#9b59b6aa',50:'#e67e22aa'};
+    if(sc6[i]){ ctx.fillStyle=sc6[i]; ctx.fillRect(cell.x-cs*.42,cell.y-cs*.42,cs*.84,cs*.84); }
+  });
+
+  // Home stretches
+  const hs6=getHomeStretch6(cs);
+  hs6.forEach(({cells,color})=>{
+    cells.forEach((cell,i)=>{
+      ctx.fillStyle=i===5?color:'#fff';
+      ctx.strokeStyle='#ccc'; ctx.lineWidth=1;
+      ctx.fillRect(cell.x-cs*.42,cell.y-cs*.42,cs*.84,cs*.84);
+      ctx.strokeRect(cell.x-cs*.42,cell.y-cs*.42,cs*.84,cs*.84);
+      if(i<5){ ctx.fillStyle=color+'77'; ctx.fillRect(cell.x-cs*.42,cell.y-cs*.42,cs*.84,cs*.84); }
+    });
+  });
+
+  // 6 home yards
+  const yardConfigs=[
+    {gx:1,gy:1,pc:0},{gx:13,gy:1,pc:1},
+    {gx:1,gy:7.5,pc:2},{gx:13,gy:7.5,pc:3},
+    {gx:1,gy:14,pc:4},{gx:13,gy:14,pc:5},
+  ];
+  yardConfigs.forEach(({gx,gy,pc})=>{
+    const col=pcolors[pc];
+    ctx.fillStyle=col+'bb';
+    ctx.fillRect(gx*cs,gy*cs,6*cs,5*cs);
+    ctx.fillStyle='rgba(255,255,255,.4)';
+    ctx.fillRect((gx+.3)*cs,(gy+.3)*cs,5.4*cs,4.4*cs);
+    const spots=[[1.2,1],[3.5,1],[1.2,3],[3.5,3]];
+    spots.forEach(([dx,dy])=>{
+      ctx.fillStyle='rgba(255,255,255,.8)';
+      ctx.beginPath(); ctx.arc((gx+dx)*cs,(gy+dy)*cs,cs*.4,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle=col; ctx.lineWidth=2.5; ctx.stroke();
+    });
+  });
+
+  // Center
+  const cx=sz/2, cy=sz/2;
+  const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,cs*2.5);
+  grad.addColorStop(0,'#fff'); grad.addColorStop(1,'#eee');
+  ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(cx,cy,cs*2.5,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#ccc'; ctx.lineWidth=2; ctx.stroke();
+
+  window._track6=track;
+  window._hs6=hs6;
+}
+
+function getTrack6(cs){
+  const g=20;
+  // 60-cell track on a 20x20 grid
+  // Using a rectangular path with 6 segments of 10 cells each
+  const raw=[
+    // Red start at (7,19), going up
+    [7,19],[7,18],[7,17],[7,16],[7,15],[7,14],[7,13],[7,12],[7,11],[7,10],
+    // Turn: go left along row 10 → Green start
+    [6,9],[5,9],[4,9],[3,9],[2,9],[1,9],[0,9],[0,10],[0,11],[0,12],
+    // Turn: go down? Blue start
+    [1,13],[2,13],[3,13],[4,13],[5,13],[6,13],[7,12]
+    // ... simplified 3-segment. Let me do a proper 60-cell path
+  ];
+  // Full 60-cell path for 6-player ludo (using 20x20 grid)
+  const path=[
+    // Segment 1 (Red): col 7, rows 19→11
+    ...[19,18,17,16,15,14,13,12,11,10].map(r=>({x:(7.5)*cs,y:(r+.5)*cs})),
+    // Segment 2 (Green): row 9, cols 7→0
+    ...[7,6,5,4,3,2,1,0].map(c=>({x:(c-.5)*cs,y:9.5*cs})).slice(1),
+    // Actually let me generate a clean path differently
+  ];
+  // Use a clean pre-computed 60-cell rectangular path
+  return computeTrack6(cs);
+}
+
+function computeTrack6(cs){
+  // 6-player board on 20x20 grid
+  // Path goes: bottom-center up → left side down → bottom-left → right...
+  // Simplified: use evenly spaced cells along a rectangular border
+  const points=[];
+  const g=20;
+  // Top strip: row 2, cols 7..12 (6 cells)
+  // Right strip: col 17, rows 3..9 (6 cells) ...etc
+  // Let's define a complete rectangular track with 60 cells
+  // The track consists of 6 segments of 10 cells
+  const segs=[
+    // Seg0 (Red enters bottom-center, goes up)
+    {r1:17,r2:8,col:7, dir:'up'},
+    // Seg1 (Green, goes right on top)
+    {r1:7,r2:7, col1:7,col2:12, dir:'right'},
+    // ...this gets complex, use a flat array
+  ];
+
+  // Final approach: hardcode 60 positions on a 20x20 grid
+  const track=[];
+  // Column 7, rows 18→9 (going up) - 10 cells - Red zone
+  for(let r=18;r>=9;r--) track.push({x:7.5*cs,y:(r+.5)*cs});
+  // Row 8, cols 6→0, then row 7, col 0 - 8 cells - approaching Green
+  for(let c=6;c>=0;c--) track.push({x:(c+.5)*cs,y:8.5*cs});
+  // ... this approach is getting messy, use a simpler symmetric path
+
+  // SIMPLIFIED 60-CELL PATH using a 11x19 inner rectangle
+  return buildCleanTrack6(cs);
+}
+
+function buildCleanTrack6(cs){
+  // Use a rectangular border path on 20x20 grid
+  // Path: 60 cells, 10 per side (it's a hexagonal-like 6-player board)
+  // Actual positions: start at (7.5, 18.5)*cs and go counter-clockwise
+  const pts=[];
+  const W=20, H=20;
+  // Left column going up: x=7, y=18 to 8 (10 cells)
+  for(let i=0;i<10;i++) pts.push({x:7.5*cs, y:(18-i+.5)*cs});
+  // Top row going right: x=7 to 12, y=8 (tricky corners)
+  pts.push({x:6.5*cs,y:8.5*cs});
+  pts.push({x:5.5*cs,y:8.5*cs});
+  pts.push({x:4.5*cs,y:7.5*cs});
+  pts.push({x:3.5*cs,y:7.5*cs});
+  pts.push({x:2.5*cs,y:8.5*cs});
+  pts.push({x:1.5*cs,y:8.5*cs});
+  pts.push({x:1.5*cs,y:9.5*cs});
+  pts.push({x:1.5*cs,y:10.5*cs});
+  pts.push({x:2.5*cs,y:11.5*cs});
+  pts.push({x:3.5*cs,y:11.5*cs});
+  // Blue zone going down
+  for(let i=0;i<10;i++) pts.push({x:4.5*cs, y:(11+i+.5)*cs});
+  // Bottom-left corner to bottom-right
+  pts.push({x:5.5*cs,y:21.5*cs}); // These go off-board; let me rethink
+
+  // OK let me just use the classic approach: compute from angles
+  return buildHexTrack(cs);
+}
+
+function buildHexTrack(cs){
+  // A Ludo 6-player board laid out as a rectangular 13x19 grid
+  // Track is the border, total 60 cells
+  const sz=cs*20;
+  const pts=[];
+  // Outer rectangular track: left side, top, right side, bottom (simplified)
+  const margin=cs*7; // home yards are 7 cells wide
+  const innerW=sz-margin*2, innerH=sz;
+
+  // Use a well-defined set of 60 coords
+  // 6 sides × 10 cells:
+  // Side 0: left-center going up
+  // Side 1: top-left diagonal
+  // Side 2: top-right
+  // Side 3: right-center going down
+  // Side 4: bottom-right diagonal
+  // Side 5: bottom-left
+  // For simplicity: use 2-row-wide rectangular track
+
+  const track=[];
+  // Just place 60 cells around a 20x20 box
+  // Using two parallel rows at each side → 6 player board style
+  // Left column (x=7): y from 18 to 9 → 10 cells
+  for(let i=0;i<10;i++) track.push({x:7.5*cs,y:(18.5-i)*cs});
+  // Top-left bend + top row
+  track.push({x:6.5*cs,y:8.5*cs});
+  track.push({x:5.5*cs,y:7.5*cs});
+  track.push({x:5.5*cs,y:6.5*cs});
+  track.push({x:6.5*cs,y:5.5*cs});
+  track.push({x:7.5*cs,y:4.5*cs});
+  track.push({x:8.5*cs,y:4.5*cs});
+  track.push({x:9.5*cs,y:4.5*cs});
+  track.push({x:10.5*cs,y:4.5*cs});
+  track.push({x:11.5*cs,y:4.5*cs});
+  track.push({x:12.5*cs,y:4.5*cs});
+  // Top-right bend + right column
+  track.push({x:13.5*cs,y:5.5*cs});
+  track.push({x:14.5*cs,y:6.5*cs});
+  track.push({x:14.5*cs,y:7.5*cs});
+  track.push({x:13.5*cs,y:8.5*cs});
+  for(let i=0;i<10;i++) track.push({x:12.5*cs,y:(9.5+i)*cs});
+  // Bottom-right bend
+  track.push({x:13.5*cs,y:19.5*cs});
+  track.push({x:14.5*cs,y:18.5*cs});
+  track.push({x:14.5*cs,y:17.5*cs});
+  track.push({x:13.5*cs,y:16.5*cs});
+  track.push({x:12.5*cs,y:15.5*cs}); // overlap - clamp to 60
+
+  // Bottom row going left
+  for(let i=0;i<10;i++) track.push({x:(12.5-i)*cs,y:19.5*cs});
+  // Bottom-left bend
+  track.push({x:7.5*cs,y:18.5*cs}); // this would be [60] = start overlap
+
+  // Trim to exactly 60
+  const final=track.slice(0,60);
+  // If less than 60, pad
+  while(final.length<60) final.push(final[final.length-1]);
+  return final;
+}
+
+function getHomeStretch6(cs){
+  return [
+    {color:'#E63946', cells:[[8.5,18.5],[8.5,17.5],[8.5,16.5],[8.5,15.5],[8.5,14.5],[10,12]].map(([x,y])=>({x:x*cs,y:y*cs}))},
+    {color:'#2ECC71', cells:[[6.5,5.5],[7.5,6.5],[8.5,7.5],[8.5,8.5],[8.5,9.5],[10,12]].map(([x,y])=>({x:x*cs,y:y*cs}))},
+    {color:'#3498DB', cells:[[8.5,5.5],[8.5,6.5],[8.5,7.5],[9.5,8.5],[10.5,9.5],[10,12]].map(([x,y])=>({x:x*cs,y:y*cs}))},
+    {color:'#F4D03F', cells:[[11.5,8.5],[11.5,9.5],[11.5,10.5],[11.5,11.5],[11.5,12.5],[10,12]].map(([x,y])=>({x:x*cs,y:y*cs}))},
+    {color:'#9b59b6', cells:[[13.5,13.5],[12.5,14.5],[11.5,15.5],[11.5,16.5],[11.5,17.5],[10,12]].map(([x,y])=>({x:x*cs,y:y*cs}))},
+    {color:'#e67e22', cells:[[11.5,19.5],[11.5,18.5],[10.5,17.5],[9.5,16.5],[9.5,15.5],[10,12]].map(([x,y])=>({x:x*cs,y:y*cs}))},
+  ];
+}
+
+// ─── Draw Tokens ─────────────────────────────────────────────
+function drawTokens(){
+  // Remove existing token elements
+  document.querySelectorAll('.token-el').forEach(e=>e.remove());
+  const cont=document.getElementById('boardCont');
+  const cv=document.getElementById('board');
+  const rect=cv.getBoundingClientRect();
+  const track=G.board6?(window._track6||[]):(window._track4||[]);
+  const hs=G.board6?(window._hs6||[]):(window._hs4||[]);
+  const cs=boardSize/(G.board6?20:15);
+
+  for(let pi=0;pi<G.total;pi++){
+    for(let ti=0;ti<TOKENS_PER_PLAYER;ti++){
+      const pos=G.tokens[pi][ti];
+      const fv=finishedVal();
+      let cx,cy;
+
+      if(pos===-1){
+        // In home yard
+        const yardPos=getYardPos(pi,ti,cs);
+        cx=yardPos.x; cy=yardPos.y;
+      } else if(pos===fv){
+        // Finished - show in center
+        cx=boardSize/2+(ti-1.5)*cs*0.5;
+        cy=boardSize/2+(pi-G.total/2)*cs*0.5;
+      } else {
+        const tl=trackLen(), homeBase=tl;
+        if(pos>=homeBase){
+          // In home stretch
+          const hsIdx=pos-homeBase;
+          if(hs[pi]&&hs[pi].cells[hsIdx]){ cx=hs[pi].cells[hsIdx].x+rect.left; cy=hs[pi].cells[hsIdx].y+rect.top; }
+          else continue;
+          cx=hs[pi].cells[hsIdx].x; cy=hs[pi].cells[hsIdx].y;
+        } else {
+          if(!track[pos]) continue;
+          cx=track[pos].x; cy=track[pos].y;
+        }
+      }
+
+      const movable=G.movable.includes(ti)&&G.cur===pi&&pi===G.myIdx;
+      const tel=document.createElement('div');
+      tel.className='token token-el'+(movable?' movable':'');
+      tel.style.cssText=`background:${PCOL[pi]};left:${rect.left+cx-12}px;top:${rect.top+cy-12}px;position:fixed;`;
+      tel.textContent=ti+1;
+      tel.style.color='rgba(255,255,255,.95)';
+      if(movable) tel.addEventListener('click',()=>window.clickToken(pi,ti));
+      document.body.appendChild(tel);
+    }
+  }
+}
+
+function getYardPos(pi, ti, cs){
+  const g=G.board6?20:15;
+  const sz=boardSize;
+  const cv=document.getElementById('board');
+  const rect=cv.getBoundingClientRect();
+  // yard spots: 2x2 grid inside corner
+  if(!G.board6){
+    const yards=[[0,0],[9,0],[0,9],[9,9]];
+    const [gx,gy]=yards[pi]||[0,0];
+    const spots=[[1.5,1.5],[3.5,1.5],[1.5,3.5],[3.5,3.5]];
+    const [dx,dy]=spots[ti];
+    return {x:(gx+dx)*cs,y:(gy+dy)*cs};
+  } else {
+    const yardConfigs=[[1,1],[13,1],[1,7.5],[13,7.5],[1,14],[13,14]];
+    const [gx,gy]=yardConfigs[pi]||[0,0];
+    const spots=[[1.2,1],[3.5,1],[1.2,3],[3.5,3]];
+    const [dx,dy]=spots[ti];
+    return {x:(gx+dx)*cs,y:(gy+dy)*cs};
+  }
+}
+
+// ─── Players bar & dice ───────────────────────────────────────
+const DICE_FACES=['','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣'];
+const DICE_NUMS =['','⚀','⚁','⚂','⚃','⚄','⚅'];
+
+function renderPlayersBar(){
+  const bar=document.getElementById('playersBar'); bar.innerHTML='';
+  for(let i=0;i<G.total;i++){
+    const chip=document.createElement('div'); chip.className='player-chip'+(G.cur===i&&!G.over?' active':'');
+    chip.style.borderColor=G.cur===i&&!G.over?PCOL[i]:'transparent';
+    chip.innerHTML=
+      `<div style="width:12px;height:12px;border-radius:50%;background:${PCOL[i]}"></div>`+
+      `<span>${G.names[i]}</span>`+
+      `<span style="font-size:10px;color:#aaa">(${G.finishCount[i]}/4 🏠)</span>`;
+    bar.appendChild(chip);
+  }
+  document.getElementById('turnBadge').innerHTML=G.over?'Game Over!':'<span style="color:'+PCOL[G.cur]+'">'+G.names[G.cur]+'\'s turn</span>';
+}
+
+function renderDice(){
+  const de=document.getElementById('diceEl');
+  const mt=G.cur===G.myIdx&&!G.over;
+  if(G.die>0) de.textContent=DICE_NUMS[G.die];
+  else de.textContent='🎲';
+  de.className='dice-face'+(mt&&!G.rolled?' can-roll':'');
+  const msg=document.getElementById('diceMsg');
+  if(G.over) msg.textContent=G.names[G.win]+' wins! 🏆';
+  else if(G.cur!==G.myIdx) msg.textContent=G.names[G.cur]+'\'s turn...';
+  else if(!G.rolled) msg.textContent='Your turn! Roll the dice.';
+  else if(G.movable.length>0) msg.textContent='Rolled '+G.die+'! Click a token to move.';
+  else msg.textContent='Rolled '+G.die+' — no moves!';
+}
+
+// ─── Win ──────────────────────────────────────────────────────
+function showWin(wi){
+  const n=G.names[wi]; const me=wi===G.myIdx;
+  document.getElementById('winEmoji').textContent=me?'🏆':'😢';
+  document.getElementById('winTitle').textContent=me?'You Win!':n+' Wins!';
+  document.getElementById('winSub').textContent=me?'All tokens home! 🎉':'Better luck next time!';
+  document.getElementById('winOverlay').classList.add('show');
+}
+
+window.restartGame=function(){
+  document.getElementById('winOverlay').classList.remove('show');
+  if(G.isHost||!G.mainCode){ initGame(); if(G.mainCode) pushFB(); renderGame(); if(G.isHost) schedBot(); }
+};
+
+window.goHome=function(){
+  document.getElementById('winOverlay').classList.remove('show');
+  if(G.unsub){ G.unsub(); G.unsub=null; }
+  cs(); G.mainCode=null; G.isHost=false; G.started=false; G.over=false; G.codes=[];
+  document.querySelectorAll('.token-el').forEach(e=>e.remove());
+  showScreen('lobby-screen');
+};
+
+// ─── Toast ────────────────────────────────────────────────────
+let tt;
+function showToast(msg,type){
+  const t=document.getElementById('toast');
+  t.innerHTML=msg; t.className='toast show '+(type||'');
+  clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ─── Code inputs ─────────────────────────────────────────────
+window.mvd=function(i){ const v=document.getElementById('d'+i).value; if(v&&i<3) document.getElementById('d'+(i+1)).focus(); };
+window.bkd=function(e,i){ if(e.key==='Backspace'&&!document.getElementById('d'+i).value&&i>0) document.getElementById('d'+(i-1)).focus(); };
+
+// ─── Session Restore ─────────────────────────────────────────
+async function restore(){
+  const s=ls(); if(!s||!s.mainCode) return;
+  try{
+    const snap=await getDoc(doc(db,COL,s.mainCode));
+    if(!snap.exists()){ cs(); return; }
+    const d=snap.data();
+    if(d.isAlias){ cs(); return; }
+    G.myId=s.myId; G.myIdx=s.myIdx; G.mainCode=s.mainCode;
+    G.codes=toArr(s.codes); G.isHost=s.role==='host'; G.total=d.total;
+    G.types=toArr(d.types,d.total); G.names=toArr(d.names,d.total); G.board6=d.board6||false;
+    if(d.status==='playing'&&d.gameState){
+      deserializeGS(d.gameState); G.started=true;
+      showScreen('game-screen'); renderGame();
+      if(G.over) showWin(G.win); else if(G.isHost) schedBot();
+    } else if(d.status==='waiting'){
+      showScreen('waiting-screen');
+      const pl=toArr(d.players,d.total);
+      renderCodes(pl); renderSlots(pl);
+    }
+    listenFB(s.mainCode);
+    showToast('Session restored!','green');
+  }catch(e){ console.error('restore:',e); cs(); }
+}
+
+// Handle resize to redraw board
+window.addEventListener('resize',()=>{ if(G.started) renderGame(); });
+
+restore();
+</script>
+</body>
+</html>
